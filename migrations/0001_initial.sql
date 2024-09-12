@@ -18,10 +18,8 @@ CREATE TABLE products (
 );
 
 CREATE TABLE product_aliases (
+  alias_name VARCHAR(128) PRIMARY KEY NOT NULL,
   product_id SERIAL NOT NULL,
-  alias_name VARCHAR(128) NOT NULL,
-
-  UNIQUE(product_id, alias_name),
 
   CONSTRAINT fk_product 
     FOREIGN KEY(product_id)
