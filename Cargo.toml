@@ -10,7 +10,7 @@ license = "GPL-3.0"
 chrono = { version = "0.4", features = ["serde"] }
 axum = { version = "0.7", features = ["macros"] }
 tokio = { version = "1.37", features = ["full"] }
-sqlx = { version = "0.7", features = ["postgres", "macros", "migrate", "runtime-tokio", "chrono", "uuid"] }
+sqlx = { version = "0.8", features = ["postgres", "macros", "migrate", "runtime-tokio", "chrono", "uuid"] }
 serde = "1.0"
 serde_with = { version = "3.8", features = ["chrono_0_4"] }
 dotenv = "0.15"
