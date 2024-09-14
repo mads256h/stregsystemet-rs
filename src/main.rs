@@ -1,4 +1,3 @@
-mod components;
 mod dso;
 mod protocol;
 mod quickbuy;
@@ -10,23 +9,17 @@ use axum::{
     extract::State,
     http::StatusCode,
     routing::{get, post},
-    Form, Router,
-};
-use components::{
-    product_menu_components::{clickable_products_table_component, products_table_component},
-    quickbuy_component::quickbuy_component,
+    Json, Router,
 };
 use dotenv::dotenv;
 use dso::{
     product::{Product, ProductId},
     streg_cents::StregCents,
 };
-use maud::{html, Markup, DOCTYPE};
+
 use protocol::buy_request::BuyRequest;
-use quickbuy::{
-    executor::execute_multi_buy_query,
-    parser::{parse_quickbuy_query, QuickBuyType},
-};
+use quickbuy::parser::{parse_quickbuy_query, QuickBuyType};
+use protocol::products::active_products_response::ActiveProductsReponse;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
@@ -53,103 +46,29 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 fn app(pool: PgPool) -> Router {
     let router = Router::new()
-        .route("/api/user/create", get(create_user))
-        .route("/api/user/all", get(get_users))
-        .route("/", get(index))
-        .route("/buy/", post(buy_handler))
-        .nest_service("/static", ServeDir::new("static"));
+        .route("/api/products/active", get(get_active_products2))
+        .route("/api/purchase/quickbuy", post(quickbuy_handler))
+        .nest_service("/", ServeDir::new("static"));
 
     router.with_state(pool)
 }
 
 #[debug_handler]
-async fn create_user(State(pool): State<PgPool>) -> Result<String, (StatusCode, String)> {
-    sqlx::query!(
-        r#"
-        INSERT INTO users(username, email, notes) VALUES ('test_user2', 'user2@test.com', 'Test user');
-        "#)
-        .execute(&pool)
-        .await
-        .map_err(internal_error)?;
-
-    Ok("Ok".into())
-}
-
-#[debug_handler]
-async fn get_users(State(pool): State<PgPool>) -> Result<Markup, (StatusCode, String)> {
-    let users = sqlx::query!(
-        r#"
-        SELECT id, username, email, notes, join_timestamp
-        FROM users;
-        "#
-    )
-    .fetch_all(&pool)
-    .await
-    .map_err(internal_error)?;
-
-    Ok(html! {
-        ol {
-            @for user in users {
-                li { (user.username) }
-            }
-        }
-    })
-}
-
-#[debug_handler]
-async fn index(State(pool): State<PgPool>) -> Result<Markup, (StatusCode, String)> {
-    let products = get_active_products(&pool).await.map_err(internal_error)?;
-
-    Ok(html! {
-        (DOCTYPE)
-        html {
-            head {
-                link rel="stylesheet" href="/static/main.css";
-            }
-            body {
-                (quickbuy_component())
-                (products_table_component(&products))
-            }
-        }
-    })
-}
-
-async fn buy_handler(
+async fn get_active_products2(
     State(pool): State<PgPool>,
-    Form(buy_request): Form<BuyRequest>,
-) -> Result<Markup, (StatusCode, String)> {
-    let quickbuy_type = parse_quickbuy_query(&buy_request.quickbuy).map_err(internal_error)?;
+) -> Result<Json<ActiveProductsReponse>, (StatusCode, String)> {
+    let active_products = get_active_products(&pool).await.map_err(internal_error)?;
+    Ok(Json(ActiveProductsReponse {
+        products: active_products,
+    }))
+}
 
-    // Should not be here.
-    let products = get_active_products(&pool).await.map_err(internal_error)?;
-
-    Ok(match quickbuy_type {
-        QuickBuyType::Username { username } => html! {
-            (DOCTYPE)
-            html {
-                head {
-                    link rel="stylesheet" href="/static/main.css";
-                }
-                body {
-                    (clickable_products_table_component(&products, &username))
-                }
-            }
-        },
-        QuickBuyType::MultiBuy { username, products } => {
-            execute_multi_buy_query(&username, &products, &pool)
-                .await
-                .map_err(internal_error)?;
-
-            html! {
-                "Username: " (username) "Products: "
-                ol {
-                    @for product in products {
-                        li { (product.product_name) " Amount: " (product.amount) }
-                    }
-                }
-            }
-        }
-    })
+#[debug_handler]
+async fn quickbuy_handler(
+    Json(buy_request): Json<BuyRequest>,
+) -> Result<Json<QuickBuyType>, (StatusCode, String)> {
+    let result = parse_quickbuy_query(&buy_request.quickbuy).map_err(internal_error)?;
+    Ok(Json(result))
 }
 
 async fn get_active_products(pool: &PgPool) -> Result<Vec<Product>, sqlx::Error> {

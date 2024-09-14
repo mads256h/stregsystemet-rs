@@ -1,6 +1,5 @@
 use std::{num::ParseIntError, str::FromStr};
 
-use maud::Render;
 use serde::{Deserialize, Serialize};
 
 use super::streg_cents::StregCents;
@@ -9,16 +8,11 @@ use super::streg_cents::StregCents;
 #[sqlx(transparent)]
 pub struct ProductId(i32);
 
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Product {
     pub id: ProductId,
     pub name: String,
     pub price: StregCents,
-}
-
-impl Render for ProductId {
-    fn render_to(&self, buffer: &mut String) {
-        self.0.render_to(buffer)
-    }
 }
 
 impl FromStr for ProductId {
