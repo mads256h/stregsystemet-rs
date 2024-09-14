@@ -18,8 +18,11 @@ use dso::{
 };
 
 use protocol::buy_request::BuyRequest;
-use quickbuy::parser::{parse_quickbuy_query, QuickBuyType};
-use protocol::products::active_products_response::ActiveProductsReponse;
+use protocol::products::active_products_response::{ActiveProduct, ActiveProductsResponse};
+use quickbuy::{
+    executor::execute_multi_buy_query,
+    parser::{parse_quickbuy_query, QuickBuyType},
+};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
@@ -56,19 +59,36 @@ fn app(pool: PgPool) -> Router {
 #[debug_handler]
 async fn get_active_products2(
     State(pool): State<PgPool>,
-) -> Result<Json<ActiveProductsReponse>, (StatusCode, String)> {
-    let active_products = get_active_products(&pool).await.map_err(internal_error)?;
-    Ok(Json(ActiveProductsReponse {
+) -> Result<Json<ActiveProductsResponse>, (StatusCode, String)> {
+    let products = get_active_products(&pool).await.map_err(internal_error)?;
+    let active_products = products
+        .into_iter()
+        .map(|p| ActiveProduct {
+            id: p.id,
+            name: p.name,
+            price: p.price.to_string(),
+        })
+        .collect();
+    Ok(Json(ActiveProductsResponse {
         products: active_products,
     }))
 }
 
 #[debug_handler]
 async fn quickbuy_handler(
+    State(pool): State<PgPool>,
     Json(buy_request): Json<BuyRequest>,
-) -> Result<Json<QuickBuyType>, (StatusCode, String)> {
-    let result = parse_quickbuy_query(&buy_request.quickbuy).map_err(internal_error)?;
-    Ok(Json(result))
+) -> Result<(), (StatusCode, String)> {
+    let quickbuy_type = parse_quickbuy_query(&buy_request.quickbuy).map_err(internal_error)?;
+
+    match quickbuy_type {
+        QuickBuyType::Username { .. } => Ok(()), // TODO: Return info as json
+        QuickBuyType::MultiBuy { username, products } => {
+            execute_multi_buy_query(&username, &products, &pool)
+                .await
+                .map_err(internal_error)
+        }
+    }
 }
 
 async fn get_active_products(pool: &PgPool) -> Result<Vec<Product>, sqlx::Error> {

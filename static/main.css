@@ -1,3 +1,20 @@
 .quickbuy-container {
   margin: auto;
 }
+
+table,
+th,
+td {
+  border: 1px solid rgb(0, 0, 0);
+}
+
+th,
+td {
+  padding: 4px;
+}
+
+table {
+  margin: 4px;
+  padding: 0;
+  display: inline-block;
+}
