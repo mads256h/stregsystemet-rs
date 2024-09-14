@@ -14,7 +14,7 @@ CREATE TABLE products (
   name VARCHAR(128) NOT NULL,
   price BIGINT NOT NULL CONSTRAINT nonnegative_price CHECK(price >= 0),
   active BOOLEAN NOT NULL,
-  deactivate_after_timestamp TIMESTAMPTZ DEFAULT NULL
+  deactivate_after_timestamp TIMESTAMPTZ
 );
 
 CREATE TABLE product_aliases (
@@ -46,7 +46,7 @@ CREATE TABLE sales (
 CREATE TABLE deposits (
   id SERIAL PRIMARY KEY NOT NULL,
   amount BIGINT NOT NULL CONSTRAINT nonnegative_amount CHECK(amount > 0),
-  timestamp TIMESTAMPTZ NOT NULL,
+  timestamp TIMESTAMPTZ NOT NULL DEFAULT now(),
   note VARCHAR NOT NULL,
   user_id SERIAL NOT NULL,
 

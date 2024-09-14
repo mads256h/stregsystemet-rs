@@ -23,7 +23,10 @@ use dso::{
 };
 use maud::{html, Markup, DOCTYPE};
 use protocol::buy_request::BuyRequest;
-use quickbuy::parser::{parse_quickbuy_query, QuickBuyType};
+use quickbuy::{
+    executor::execute_multi_buy_query,
+    parser::{parse_quickbuy_query, QuickBuyType},
+};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
@@ -132,14 +135,20 @@ async fn buy_handler(
                 }
             }
         },
-        QuickBuyType::MultiBuy { username, products } => html! {
-            "Username: " (username) "Products: "
-            ol {
-                @for product in products {
-                    li { (product.product_name) " Amount: " (product.amount) }
+        QuickBuyType::MultiBuy { username, products } => {
+            execute_multi_buy_query(&username, &products, &pool)
+                .await
+                .map_err(internal_error)?;
+
+            html! {
+                "Username: " (username) "Products: "
+                ol {
+                    @for product in products {
+                        li { (product.product_name) " Amount: " (product.amount) }
+                    }
                 }
             }
-        },
+        }
     })
 }
 

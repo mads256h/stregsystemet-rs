@@ -6,7 +6,7 @@ pub fn parse_quickbuy_query(quickbuy_query: &str) -> Result<QuickBuyType, QuickB
     let trimmed = quickbuy_query.trim();
 
     let split = trimmed
-        .split(" ")
+        .split(' ')
         .filter(|&s| !s.is_empty())
         .collect::<Vec<&str>>();
     match split.len() {
@@ -34,7 +34,7 @@ fn parse_multi_buy_expression(split: &[&str]) -> Result<QuickBuyType, MultiBuyPa
 }
 
 fn parse_multi_buy_product(product_query: &str) -> Result<MultiBuyProduct, MultiBuyParseError> {
-    let split = product_query.split(":").collect::<Vec<&str>>();
+    let split = product_query.split(':').collect::<Vec<&str>>();
 
     match split.len() {
         1 => Ok(MultiBuyProduct {
