@@ -1,6 +1,20 @@
-INSERT INTO products(name, price, active, deactivate_after_timestamp)
+INSERT INTO products(id, name, price, active, deactivate_after_timestamp)
 VALUES 
-  ('Øl',               700 ,  true,  NULL),
-  ('Sodavand',         1200,  true,  NULL),
-  ('Søm',              200,   false, NULL),
-  ('Fytteturs Billet', 30000, true,  '2024-09-01');
+  (1, 'Øl',               700 ,  true,  NULL),
+  (2, 'Sodavand',         1200,  true,  NULL),
+  (3, 'Søm',              200,   false, NULL),
+  (4, 'Fytteturs Billet', 30000, true,  '2024-09-01');
+
+INSERT INTO product_aliases(alias_name, product_id)
+VALUES
+  ('øl',   1),
+  ('soda', 2),
+  ('cola', 2);
+
+INSERT INTO users(id, username, email, notes)
+VALUES
+  (1, 'test_user', 'test@email.com', 'test user');
+
+INSERT INTO deposits(amount, note, user_id)
+VALUES
+  (10000, 'test deposit', 1);
