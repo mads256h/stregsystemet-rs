@@ -36,6 +36,8 @@ jobs:
           toolchain: stable
           override: true
 
+      - uses: Swatinem/rust-cache@v2
+
       - name: Migrate database
         run: |
           sudo apt-get install libpq-dev -y
