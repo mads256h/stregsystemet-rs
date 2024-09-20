@@ -1,4 +1,4 @@
-use std::num::ParseIntError;
+use std::num::{NonZeroU32, ParseIntError};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -40,11 +40,11 @@ fn parse_multi_buy_product(product_query: &str) -> Result<MultiBuyProduct, Multi
     match split.len() {
         1 => Ok(MultiBuyProduct {
             product_name: parse_product_name(split[0])?.into(),
-            amount: 1,
+            amount: NonZeroU32::new(1).unwrap(),
         }),
         2 => Ok(MultiBuyProduct {
             product_name: parse_product_name(split[0])?.into(),
-            amount: split[1].parse::<u32>()?, // TODO: 0 should not be allowed.
+            amount: split[1].parse::<NonZeroU32>()?,
         }),
         _ => Err(MultiBuyParseError::Syntax),
     }
@@ -71,7 +71,7 @@ pub enum QuickBuyType {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MultiBuyProduct {
     pub product_name: String,
-    pub amount: u32,
+    pub amount: NonZeroU32,
 }
 
 #[derive(Error, Debug)]
@@ -132,13 +132,13 @@ mod tests {
                 let id_product = &products[2];
 
                 assert_eq!(kaffe_product.product_name, "kaffe");
-                assert_eq!(kaffe_product.amount, 1);
+                assert_eq!(kaffe_product.amount, NonZeroU32::new(1).unwrap());
 
                 assert_eq!(øl_product.product_name, "øl");
-                assert_eq!(øl_product.amount, 2);
+                assert_eq!(øl_product.amount, NonZeroU32::new(2).unwrap());
 
                 assert_eq!(id_product.product_name, "21");
-                assert_eq!(id_product.amount, 3);
+                assert_eq!(id_product.amount, NonZeroU32::new(3).unwrap());
             }
             _ => unreachable!(),
         }
@@ -157,6 +157,11 @@ mod tests {
     #[test]
     fn missing_amount_multibuy_query() {
         parse_and_expect_invalid_amount_multibuy_query("test_user p:");
+    }
+
+    #[test]
+    fn zero_amount_multibuy_query() {
+        parse_and_expect_invalid_amount_multibuy_query("test_user p:0");
     }
 
     #[test]

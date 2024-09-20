@@ -173,7 +173,7 @@ async fn purchase_products(
     transaction: &mut Transaction<'static, Postgres>,
 ) -> Result<(), sqlx::Error> {
     for multi_buy_product_with_id in multi_buy_products_with_ids {
-        for _ in 0..(multi_buy_product_with_id.multi_buy_product.amount) {
+        for _ in 0..(multi_buy_product_with_id.multi_buy_product.amount.into()) {
             purchase_product(user_id, multi_buy_product_with_id.product_id, transaction).await?;
         }
     }
@@ -228,6 +228,8 @@ struct MultiBuyProductProductIdPair<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::num::NonZeroU32;
+
     use super::*;
 
     #[sqlx::test(fixtures(
@@ -238,7 +240,7 @@ mod tests {
     async fn multi_buy_buy_product_by_id(pool: PgPool) {
         let product = MultiBuyProduct {
             product_name: "1".to_string(),
-            amount: 1,
+            amount: NonZeroU32::new(1).unwrap(),
         };
         let result = execute_multi_buy_query("test_user", &[product], &pool).await;
 
@@ -254,7 +256,7 @@ mod tests {
     async fn multi_buy_buy_product_by_alias(pool: PgPool) {
         let product = MultiBuyProduct {
             product_name: "enabled".to_string(),
-            amount: 1,
+            amount: NonZeroU32::new(1).unwrap(),
         };
         let result = execute_multi_buy_query("test_user", &[product], &pool).await;
 
@@ -274,7 +276,7 @@ mod tests {
     async fn multi_buy_invalid_product_unknown(pool: PgPool) {
         let product = MultiBuyProduct {
             product_name: "1337".to_string(),
-            amount: 1,
+            amount: NonZeroU32::new(1).unwrap(),
         };
         let result = execute_multi_buy_query("test_user", &[product], &pool).await;
 
@@ -291,7 +293,7 @@ mod tests {
     async fn multi_buy_invalid_product_inactive(pool: PgPool) {
         let product = MultiBuyProduct {
             product_name: "inactive".to_string(),
-            amount: 1,
+            amount: NonZeroU32::new(1).unwrap(),
         };
         let result = execute_multi_buy_query("test_user", &[product], &pool).await;
 
@@ -308,7 +310,7 @@ mod tests {
     async fn multi_buy_invalid_product_deactivated_by_timestamp(pool: PgPool) {
         let product = MultiBuyProduct {
             product_name: "inactive_timestamp".to_string(),
-            amount: 1,
+            amount: NonZeroU32::new(1).unwrap(),
         };
         let result = execute_multi_buy_query("test_user", &[product], &pool).await;
 
@@ -325,7 +327,7 @@ mod tests {
     async fn multi_buy_insufficient_funds_no_money(pool: PgPool) {
         let product = MultiBuyProduct {
             product_name: "enabled".to_string(),
-            amount: 1,
+            amount: NonZeroU32::new(1).unwrap(),
         };
         let result = execute_multi_buy_query("test_user", &[product], &pool).await;
 
@@ -344,7 +346,7 @@ mod tests {
     async fn multi_buy_insufficient_funds_too_expensive(pool: PgPool) {
         let product = MultiBuyProduct {
             product_name: "expensive".to_string(),
-            amount: 1,
+            amount: NonZeroU32::new(1).unwrap(),
         };
         let result = execute_multi_buy_query("test_user", &[product], &pool).await;
 
@@ -362,7 +364,7 @@ mod tests {
     async fn multi_buy_streg_cents_overflow(pool: PgPool) {
         let product = MultiBuyProduct {
             product_name: "overflow".to_string(),
-            amount: u32::MAX,
+            amount: NonZeroU32::MAX,
         };
         let result = execute_multi_buy_query("test_user", &[product], &pool).await;
 
