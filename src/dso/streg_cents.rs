@@ -3,7 +3,6 @@ use std::{
     ops::{Add, Mul},
 };
 
-use maud::Render;
 use serde::{Deserialize, Serialize};
 
 #[derive(
@@ -18,12 +17,6 @@ impl Display for StregCents {
         let cents = self.0 % 100;
 
         write!(f, "{}.{:02}", dollars, cents)
-    }
-}
-
-impl Render for StregCents {
-    fn render_to(&self, buffer: &mut String) {
-        self.to_string().render_to(buffer)
     }
 }
 

@@ -1,5 +1,6 @@
 use std::num::ParseIntError;
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub fn parse_quickbuy_query(quickbuy_query: &str) -> Result<QuickBuyType, QuickBuyParseError> {
@@ -56,7 +57,7 @@ fn parse_product_name(product_name: &str) -> Result<&str, MultiBuyParseError> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum QuickBuyType {
     Username {
         username: String,
@@ -67,7 +68,7 @@ pub enum QuickBuyType {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MultiBuyProduct {
     pub product_name: String,
     pub amount: u32,
