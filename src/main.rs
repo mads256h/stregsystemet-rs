@@ -1,13 +1,13 @@
 mod dso;
 mod protocol;
 mod quickbuy;
+mod responses;
 
 use std::error::Error;
 
 use axum::{
     debug_handler,
     extract::State,
-    http::StatusCode,
     routing::{get, post},
     Json, Router,
 };
@@ -17,12 +17,16 @@ use dso::{
     streg_cents::StregCents,
 };
 
-use protocol::buy_request::BuyRequest;
 use protocol::products::active_products_response::{ActiveProduct, ActiveProductsResponse};
+use protocol::{
+    buy_request::{BuyError, BuyRequest, BuyResponse},
+    products::active_products_response::DatabaseError,
+};
 use quickbuy::{
     executor::execute_multi_buy_query,
     parser::{parse_quickbuy_query, QuickBuyType},
 };
+use responses::result_json::ResultJson;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
@@ -49,7 +53,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 fn app(pool: PgPool) -> Router {
     let router = Router::new()
-        .route("/api/products/active", get(get_active_products2))
+        .route("/api/products/active", get(get_active_products))
         .route("/api/purchase/quickbuy", post(quickbuy_handler))
         .nest_service("/", ServeDir::new("static"));
 
@@ -57,55 +61,50 @@ fn app(pool: PgPool) -> Router {
 }
 
 #[debug_handler]
-async fn get_active_products2(
+async fn get_active_products(
     State(pool): State<PgPool>,
-) -> Result<Json<ActiveProductsResponse>, (StatusCode, String)> {
-    let products = get_active_products(&pool).await.map_err(internal_error)?;
-    let active_products = products
-        .into_iter()
-        .map(|p| ActiveProduct {
-            id: p.id,
-            name: p.name,
-            price: p.price.to_string(),
+) -> ResultJson<ActiveProductsResponse, DatabaseError> {
+    async {
+        let products = sqlx::query_as!(
+            Product,
+            r#"
+            SELECT id as "id: ProductId", name, price as "price: StregCents"
+            FROM products
+            WHERE active=true AND (deactivate_after_timestamp IS NULL OR deactivate_after_timestamp > now())
+            "#)
+            .fetch_all(&pool)
+            .await?;
+
+        let active_products = products
+            .into_iter()
+            .map(|p| ActiveProduct {
+                id: p.id,
+                name: p.name,
+                price: p.price.to_string(),
+            })
+            .collect();
+
+        Ok(ActiveProductsResponse {
+            products: active_products,
         })
-        .collect();
-    Ok(Json(ActiveProductsResponse {
-        products: active_products,
-    }))
+    }.await.into()
 }
 
 #[debug_handler]
 async fn quickbuy_handler(
     State(pool): State<PgPool>,
     Json(buy_request): Json<BuyRequest>,
-) -> Result<(), (StatusCode, String)> {
-    let quickbuy_type = parse_quickbuy_query(&buy_request.quickbuy).map_err(internal_error)?;
-
-    match quickbuy_type {
-        QuickBuyType::Username { .. } => Ok(()), // TODO: Return info as json
-        QuickBuyType::MultiBuy { username, products } => {
-            execute_multi_buy_query(&username, &products, &pool)
-                .await
-                .map_err(internal_error)
+) -> ResultJson<BuyResponse, BuyError> {
+    async {
+        let quickbuy_type = parse_quickbuy_query(&buy_request.quickbuy)?;
+        match quickbuy_type {
+            QuickBuyType::Username { username } => Ok(BuyResponse::Username { username }),
+            QuickBuyType::MultiBuy { username, products } => {
+                execute_multi_buy_query(&username, &products, &pool).await?;
+                Ok(BuyResponse::MultiBuy)
+            }
         }
     }
-}
-
-async fn get_active_products(pool: &PgPool) -> Result<Vec<Product>, sqlx::Error> {
-    sqlx::query_as!(
-        Product,
-        r#"
-        SELECT id as "id: ProductId", name, price as "price: StregCents"
-        FROM products
-        WHERE active=true AND (deactivate_after_timestamp IS NULL OR deactivate_after_timestamp > now())
-        "#)
-        .fetch_all(pool)
-        .await
-}
-
-fn internal_error<E>(err: E) -> (StatusCode, String)
-where
-    E: std::error::Error,
-{
-    (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
+    .await
+    .into()
 }

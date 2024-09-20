@@ -1774,10 +1774,13 @@ name = "stregsystemet-rs"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "bytes",
  "chrono",
  "derive_more",
  "dotenv",
+ "mime",
  "serde",
+ "serde_json",
  "serde_with",
  "sqlx",
  "thiserror",

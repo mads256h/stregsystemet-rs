@@ -1,6 +1,7 @@
 use std::num::{NonZeroU32, ParseIntError};
 
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 use thiserror::Error;
 
 pub fn parse_quickbuy_query(quickbuy_query: &str) -> Result<QuickBuyType, QuickBuyParseError> {
@@ -74,7 +75,7 @@ pub struct MultiBuyProduct {
     pub amount: NonZeroU32,
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Serialize)]
 pub enum QuickBuyParseError {
     #[error("query is empty")]
     EmptyQuery,
@@ -83,7 +84,8 @@ pub enum QuickBuyParseError {
     MultiBuy(#[from] MultiBuyParseError),
 }
 
-#[derive(Error, Debug)]
+#[serde_as]
+#[derive(Error, Debug, Serialize)]
 pub enum MultiBuyParseError {
     #[error("syntax error")]
     Syntax,
@@ -92,7 +94,11 @@ pub enum MultiBuyParseError {
     EmptyProduct,
 
     #[error("invalid amount")]
-    InvalidAmount(#[from] ParseIntError),
+    InvalidAmount(
+        #[serde_as(as = "DisplayFromStr")]
+        #[from]
+        ParseIntError,
+    ),
 }
 
 #[cfg(test)]
