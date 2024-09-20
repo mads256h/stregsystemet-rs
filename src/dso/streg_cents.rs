@@ -1,5 +1,6 @@
 use std::{
     fmt::Display,
+    num::NonZeroU32,
     ops::{Add, Mul},
 };
 
@@ -28,11 +29,12 @@ impl Add for StregCents {
     }
 }
 
-impl Mul<u32> for StregCents {
+impl Mul<NonZeroU32> for StregCents {
     type Output = Option<Self>;
 
-    fn mul(self, rhs: u32) -> Self::Output {
-        i64::checked_mul(self.0, rhs as i64).map(StregCents)
+    fn mul(self, rhs: NonZeroU32) -> Self::Output {
+        let r: u32 = rhs.into();
+        i64::checked_mul(self.0, r as i64).map(StregCents)
     }
 }
 
