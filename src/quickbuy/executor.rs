@@ -114,7 +114,7 @@ async fn get_product_price_by_id(
         r#"
         SELECT price as "price: StregCents"
         FROM products
-        WHERE id = $1
+        WHERE id = $1 AND active=true AND (deactivate_after_timestamp IS NULL OR deactivate_after_timestamp > now())
         "#,
         product_id as ProductId
     )
@@ -224,4 +224,151 @@ pub enum MultiBuyExecutorError {
 struct MultiBuyProductProductIdPair<'a> {
     multi_buy_product: &'a MultiBuyProduct,
     product_id: ProductId,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[sqlx::test(fixtures(
+        "../../fixtures/users.sql",
+        "../../fixtures/products.sql",
+        "../../fixtures/deposits.sql"
+    ))]
+    async fn multi_buy_buy_product_by_id(pool: PgPool) {
+        let product = MultiBuyProduct {
+            product_name: "1".to_string(),
+            amount: 1,
+        };
+        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
+
+        assert!(matches!(result, Ok(())));
+    }
+
+    #[sqlx::test(fixtures(
+        "../../fixtures/users.sql",
+        "../../fixtures/products.sql",
+        "../../fixtures/product_aliases.sql",
+        "../../fixtures/deposits.sql"
+    ))]
+    async fn multi_buy_buy_product_by_alias(pool: PgPool) {
+        let product = MultiBuyProduct {
+            product_name: "enabled".to_string(),
+            amount: 1,
+        };
+        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
+
+        assert!(matches!(result, Ok(())));
+    }
+
+    #[sqlx::test]
+    async fn multi_buy_invalid_username(pool: PgPool) {
+        let result = execute_multi_buy_query("i_do_not_exist", &[], &pool).await;
+
+        assert!(
+            matches!(result, Err(MultiBuyExecutorError::InvalidUsername(username)) if username == "i_do_not_exist")
+        );
+    }
+
+    #[sqlx::test(fixtures("../../fixtures/users.sql"))]
+    async fn multi_buy_invalid_product_unknown(pool: PgPool) {
+        let product = MultiBuyProduct {
+            product_name: "1337".to_string(),
+            amount: 1,
+        };
+        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
+
+        assert!(
+            matches!(result, Err(MultiBuyExecutorError::InvalidProduct(product_name)) if product_name == "1337")
+        );
+    }
+
+    #[sqlx::test(fixtures(
+        "../../fixtures/users.sql",
+        "../../fixtures/products.sql",
+        "../../fixtures/product_aliases.sql"
+    ))]
+    async fn multi_buy_invalid_product_inactive(pool: PgPool) {
+        let product = MultiBuyProduct {
+            product_name: "inactive".to_string(),
+            amount: 1,
+        };
+        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
+
+        assert!(
+            matches!(result, Err(MultiBuyExecutorError::InvalidProduct(product_name)) if product_name == "inactive")
+        );
+    }
+
+    #[sqlx::test(fixtures(
+        "../../fixtures/users.sql",
+        "../../fixtures/products.sql",
+        "../../fixtures/product_aliases.sql"
+    ))]
+    async fn multi_buy_invalid_product_deactivated_by_timestamp(pool: PgPool) {
+        let product = MultiBuyProduct {
+            product_name: "inactive_timestamp".to_string(),
+            amount: 1,
+        };
+        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
+
+        assert!(
+            matches!(result, Err(MultiBuyExecutorError::InvalidProduct(product_name)) if product_name == "inactive_timestamp")
+        );
+    }
+
+    #[sqlx::test(fixtures(
+        "../../fixtures/users.sql",
+        "../../fixtures/products.sql",
+        "../../fixtures/product_aliases.sql"
+    ))]
+    async fn multi_buy_insufficient_funds_no_money(pool: PgPool) {
+        let product = MultiBuyProduct {
+            product_name: "enabled".to_string(),
+            amount: 1,
+        };
+        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
+
+        assert!(matches!(
+            result,
+            Err(MultiBuyExecutorError::InsufficientFunds(_))
+        ));
+    }
+
+    #[sqlx::test(fixtures(
+        "../../fixtures/users.sql",
+        "../../fixtures/products.sql",
+        "../../fixtures/product_aliases.sql",
+        "../../fixtures/deposits.sql"
+    ))]
+    async fn multi_buy_insufficient_funds_too_expensive(pool: PgPool) {
+        let product = MultiBuyProduct {
+            product_name: "expensive".to_string(),
+            amount: 1,
+        };
+        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
+
+        assert!(matches!(
+            result,
+            Err(MultiBuyExecutorError::InsufficientFunds(_))
+        ));
+    }
+
+    #[sqlx::test(fixtures(
+        "../../fixtures/users.sql",
+        "../../fixtures/products.sql",
+        "../../fixtures/product_aliases.sql"
+    ))]
+    async fn multi_buy_streg_cents_overflow(pool: PgPool) {
+        let product = MultiBuyProduct {
+            product_name: "overflow".to_string(),
+            amount: u32::MAX,
+        };
+        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
+
+        assert!(matches!(
+            result,
+            Err(MultiBuyExecutorError::StregCentsOverflow)
+        ));
+    }
 }
