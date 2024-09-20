@@ -1,3 +1,6 @@
+use serde::Serialize;
+use serde_with::serde_as;
+use serde_with::DisplayFromStr;
 use sqlx::{PgPool, Postgres, Transaction};
 use thiserror::Error;
 
@@ -203,10 +206,15 @@ async fn purchase_product(
     Ok(())
 }
 
-#[derive(Error, Debug)]
+#[serde_as]
+#[derive(Error, Debug, Serialize)]
 pub enum MultiBuyExecutorError {
     #[error("database error: {0}")]
-    DbError(#[from] sqlx::Error),
+    DbError(
+        #[serde_as(as = "DisplayFromStr")]
+        #[from]
+        sqlx::Error,
+    ),
 
     #[error("invalid username: {0}")]
     InvalidUsername(String),
