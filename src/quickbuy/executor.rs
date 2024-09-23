@@ -50,7 +50,7 @@ async fn get_user_id_by_name(
         r#"
         SELECT id as "id: UserId"
         FROM users
-        WHERE username = $1
+        WHERE LOWER(username) = LOWER($1)
         "#,
         username
     )
@@ -161,7 +161,7 @@ async fn get_product_id_by_alias(
         r#"
         SELECT product_id as "id: ProductId"
         FROM product_aliases
-        WHERE alias_name = $1
+        WHERE alias_name = LOWER($1) -- alias_name is always lower due to constraint
         "#,
         product_name
     )
@@ -250,9 +250,10 @@ mod tests {
             product_name: "1".to_string(),
             amount: NonZeroU32::new(1).unwrap(),
         };
-        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
 
-        assert!(matches!(result, Ok(())));
+        execute_multi_buy_query("test_user", &[product], &pool)
+            .await
+            .unwrap();
     }
 
     #[sqlx::test(fixtures(
@@ -266,9 +267,44 @@ mod tests {
             product_name: "enabled".to_string(),
             amount: NonZeroU32::new(1).unwrap(),
         };
-        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
 
-        assert!(matches!(result, Ok(())));
+        execute_multi_buy_query("test_user", &[product], &pool)
+            .await
+            .unwrap();
+    }
+
+    #[sqlx::test(fixtures(
+        "../../fixtures/users.sql",
+        "../../fixtures/products.sql",
+        "../../fixtures/product_aliases.sql",
+        "../../fixtures/deposits.sql"
+    ))]
+    async fn multi_buy_buy_product_by_alias_case_insensitive(pool: PgPool) {
+        let product = MultiBuyProduct {
+            product_name: "eNaBlEd".to_string(),
+            amount: NonZeroU32::new(1).unwrap(),
+        };
+
+        execute_multi_buy_query("test_user", &[product], &pool)
+            .await
+            .unwrap();
+    }
+
+    #[sqlx::test(fixtures(
+        "../../fixtures/users.sql",
+        "../../fixtures/products.sql",
+        "../../fixtures/product_aliases.sql",
+        "../../fixtures/deposits.sql"
+    ))]
+    async fn multi_buy_case_insensitive_username(pool: PgPool) {
+        let product = MultiBuyProduct {
+            product_name: "enabled".to_string(),
+            amount: NonZeroU32::new(1).unwrap(),
+        };
+
+        execute_multi_buy_query("TeSt_UsEr", &[product], &pool)
+            .await
+            .unwrap();
     }
 
     #[sqlx::test]
