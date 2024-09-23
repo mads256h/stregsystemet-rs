@@ -1,6 +1,6 @@
 CREATE TABLE users (
   id SERIAL PRIMARY KEY NOT NULL,
-  username VARCHAR(128) NOT NULL,
+  username VARCHAR(128) NOT NULL CONSTRAINT no_whitespace CHECK(LENGTH(username) != 0 AND username NOT LIKE '% %'),
   email VARCHAR(128) NOT NULL,
   notes VARCHAR NOT NULL,
   join_timestamp TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -18,7 +18,7 @@ CREATE TABLE products (
 );
 
 CREATE TABLE product_aliases (
-  alias_name VARCHAR(128) PRIMARY KEY NOT NULL,
+  alias_name VARCHAR(128) PRIMARY KEY NOT NULL CONSTRAINT no_whitespace_or_colon CHECK(LENGTH(alias_name) != 0 AND alias_name NOT LIKE '% %' AND alias_name NOT LIKE '%:%'),
   product_id SERIAL NOT NULL,
 
   CONSTRAINT fk_product 
