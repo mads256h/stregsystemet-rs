@@ -18,5 +18,5 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 derive_more = { version = "1.0", features = ["full"] }
 tower = { version = "0.5", features = ["util"] }
-tower-http = { version = "0.5.0", features = ["fs", "trace"] }
+tower-http = { version = "0.6.0", features = ["fs", "trace"] }
 thiserror = "1.0.64"
