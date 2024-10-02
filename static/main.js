@@ -60,7 +60,7 @@ function populateTable(products) {
   const table2 = document.getElementById("products2").getElementsByTagName("tbody")[0];
   for (const i in products) {
     const row = createRow(products[i]);
-    if (i % 2 == 0) {
+    if (i % 2 === 0) {
       table1.appendChild(row);
     } else {
       table2.appendChild(row);
@@ -73,6 +73,7 @@ function createRow(product) {
   const row = document.createElement("tr")
   const id = createTableCell(product.id);
   const name = createTableCell(product.name);
+  name.title = getProductTooltip(product);
   const price = createTableCell(product.price);
   row.appendChild(id);
   row.appendChild(name);
@@ -84,4 +85,13 @@ function createTableCell(text) {
   const cell = document.createElement("td")
   cell.innerText = text;
   return cell;
+}
+
+function getProductTooltip(product) {
+  if (product.aliases.length === 0) {
+    return "";
+  }
+
+  return "Aliasser:\n"
+    + product.aliases.join("\n");
 }

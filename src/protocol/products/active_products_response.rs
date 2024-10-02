@@ -15,6 +15,7 @@ pub struct ActiveProduct {
     pub id: ProductId,
     pub name: String,
     pub price: String,
+    pub aliases: Vec<String>,
 }
 
 // TODO: Should not be here
