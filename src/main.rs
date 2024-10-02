@@ -3,13 +3,15 @@ mod protocol;
 mod quickbuy;
 mod responses;
 
-use std::error::Error;
+use std::{error::Error, time::Duration};
 
 use axum::{
     debug_handler,
+    error_handling::HandleErrorLayer,
     extract::State,
+    http::StatusCode,
     routing::{get, post},
-    Json, Router,
+    BoxError, Json, Router,
 };
 use dotenv::dotenv;
 use dso::{
@@ -29,6 +31,7 @@ use quickbuy::{
 use responses::result_json::ResultJson;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::net::TcpListener;
+use tower::{timeout::TimeoutLayer, ServiceBuilder};
 use tower_http::services::ServeDir;
 
 #[tokio::main]
@@ -55,7 +58,16 @@ fn app(pool: PgPool) -> Router {
     let router = Router::new()
         .route("/api/products/active", get(get_active_products))
         .route("/api/purchase/quickbuy", post(quickbuy_handler))
-        .nest_service("/", ServeDir::new("static"));
+        .nest_service("/", ServeDir::new("static"))
+        .layer(
+            ServiceBuilder::new()
+                // this middleware goes above `TimeoutLayer` because it will receive
+                // errors returned by `TimeoutLayer`
+                .layer(HandleErrorLayer::new(|_: BoxError| async {
+                    StatusCode::REQUEST_TIMEOUT
+                }))
+                .layer(TimeoutLayer::new(Duration::from_secs(30))),
+        );
 
     router.with_state(pool)
 }
