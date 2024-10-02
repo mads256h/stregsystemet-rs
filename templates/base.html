@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="da">
+  <head>
+    <meta charset="UTF-8"> 
+    <title>Stregsystemet</title>
+    <link rel="stylesheet" href="/static/main.css" />
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <header>
+      <div><input type="button" value="Genstart" onclick="location.href='/'"></div>
+      <div><h1>TREOENs STREGSYSTEM</h1></div>
+      <div>
+          <input type="button" value="Menu">
+          <input type="button" value="Tilmeld">
+      </div>
+    </header>
+    <main>
+      {% block content %}<p>Placeholder content</p>{% endblock %}
+    </main>
+    <footer>
+    </footer>
+  </body>
+</html>

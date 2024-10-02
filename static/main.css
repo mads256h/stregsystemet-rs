@@ -2,6 +2,44 @@
   margin: auto;
 }
 
+body {
+  margin: 0
+}
+
+header {
+  padding: 1rem;
+  border-bottom: 1px solid;
+
+  display: flex;
+  justify-content: space-between;
+}
+
+header>div {
+  display: flex;
+  align-items: center;
+}
+
+header h1 {
+  margin: 0;
+}
+
+h1 {
+  color: red;
+}
+
+input[type="button"] {
+  margin: 0 2px 0 2px;
+}
+
+main {
+  padding: 1rem;
+}
+
+footer {
+  padding: 1rem;
+  border-top: 1px solid;
+}
+
 table,
 th,
 td {
@@ -17,4 +55,10 @@ table {
   margin: 4px;
   padding: 0;
   display: inline-block;
+}
+
+.centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
