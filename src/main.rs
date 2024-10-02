@@ -15,10 +15,7 @@ use axum::{
     BoxError, Json, Router,
 };
 use dotenv::dotenv;
-use dso::{
-    product::{Product, ProductId},
-    streg_cents::StregCents,
-};
+use dso::{product::ProductId, streg_cents::StregCents};
 
 use protocol::products::active_products_response::{ActiveProduct, ActiveProductsResponse};
 use protocol::{
@@ -91,12 +88,15 @@ async fn get_active_products(
     State(pool): State<PgPool>,
 ) -> ResultJson<ActiveProductsResponse, DatabaseError> {
     async {
-        let products = sqlx::query_as!(
-            Product,
+        let products = sqlx::query!(
             r#"
-            SELECT id as "id: ProductId", name, price as "price: StregCents"
+            SELECT products.id as "id: ProductId", products.name, products.price as "price: StregCents", STRING_AGG(product_aliases.alias_name, ' ') as aliases
+            -- ' ' is an illegal character in aliases so it can be used as a separator
             FROM products
-            WHERE active=true AND (deactivate_after_timestamp IS NULL OR deactivate_after_timestamp > now())
+            LEFT JOIN product_aliases
+            ON products.id=product_aliases.product_id
+            WHERE products.active=true AND (products.deactivate_after_timestamp IS NULL OR products.deactivate_after_timestamp > now())
+            GROUP BY products.id, products.name, products.price
             "#)
             .fetch_all(&pool)
             .await?;
@@ -107,6 +107,7 @@ async fn get_active_products(
                 id: p.id,
                 name: p.name,
                 price: p.price.to_string(),
+                aliases: p.aliases.map(|a| a.split(" ").map(|a| a.to_string()).collect()).unwrap_or_default(),
             })
             .collect();
 
