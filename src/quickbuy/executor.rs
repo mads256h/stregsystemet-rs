@@ -3,6 +3,7 @@ use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 use sqlx::{PgPool, Postgres, Transaction};
 use thiserror::Error;
+use tracing::trace;
 
 use crate::dso::{
     product::ProductId,
@@ -38,6 +39,8 @@ pub async fn execute_multi_buy_query(
     purchase_products(user_id, &multi_buy_products_with_ids, &mut transaction).await?;
 
     transaction.commit().await?;
+
+    trace!(target: "stregsystemet", "user {} just bought products totalling {} kr", username, product_price_sum);
 
     Ok(())
 }
