@@ -26,7 +26,7 @@ use protocol::{
     products::active_products_response::DatabaseError,
 };
 use quickbuy::{
-    executor::execute_multi_buy_query,
+    executor::{execute_multi_buy_query, username_exists},
     parser::{parse_quickbuy_query, QuickBuyType},
 };
 use responses::result_json::ResultJson;
@@ -124,7 +124,10 @@ async fn quickbuy_handler(
     async {
         let quickbuy_type = parse_quickbuy_query(&buy_request.quickbuy)?;
         match quickbuy_type {
-            QuickBuyType::Username { username } => Ok(BuyResponse::Username { username }),
+            QuickBuyType::Username { username } => {
+                username_exists(&username, &pool).await?;
+                Ok(BuyResponse::Username { username })
+            }
             QuickBuyType::MultiBuy { username, products } => {
                 execute_multi_buy_query(&username, &products, &pool).await?;
                 Ok(BuyResponse::MultiBuy)
