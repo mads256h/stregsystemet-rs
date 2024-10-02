@@ -69,7 +69,8 @@ fn app(pool: PgPool) -> Router {
                     StatusCode::REQUEST_TIMEOUT
                 }))
                 .layer(TimeoutLayer::new(Duration::from_secs(30))),
-        );
+        )
+        .fallback(not_found_handler);
 
     router.with_state(pool)
 }
@@ -130,4 +131,13 @@ struct IndexTemplate {}
 #[debug_handler]
 async fn index_handler() -> IndexTemplate {
     IndexTemplate {}
+}
+
+#[derive(Template)]
+#[template(path = "404.html")]
+struct NotFoundTemplate {}
+
+#[debug_handler]
+async fn not_found_handler() -> (StatusCode, NotFoundTemplate) {
+    (StatusCode::NOT_FOUND, NotFoundTemplate {})
 }

@@ -10,13 +10,22 @@ header {
   padding: 1rem;
   border-bottom: 1px solid;
 
-  display: flex;
-  justify-content: space-between;
+  display: grid;
 }
 
 header>div {
-  display: flex;
-  align-items: center;
+  grid-column-start: 1;
+  grid-row-start: 1;
+  justify-self: center;
+  align-content: center;
+}
+
+header>div:first-child {
+  justify-self: left;
+}
+
+header>div:last-child {
+  justify-self: right;
 }
 
 header h1 {
@@ -61,4 +70,8 @@ table {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.text-centered {
+  text-align: center;
 }
