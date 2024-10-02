@@ -33,11 +33,21 @@ use responses::result_json::ResultJson;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::net::TcpListener;
 use tower::{timeout::TimeoutLayer, ServiceBuilder};
-use tower_http::services::ServeDir;
+use tower_http::{services::ServeDir, trace::TraceLayer};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv().ok();
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                "stregsystemet=trace,tower_http=debug,axum::rejection=trace".into()
+            }),
+        )
+        .with(tracing_subscriber::fmt::layer().pretty())
+        .init();
 
     let db_connection_string = std::env::var("DATABASE_URL")?;
 
@@ -61,6 +71,7 @@ fn app(pool: PgPool) -> Router {
         .route("/api/products/active", get(get_active_products))
         .route("/api/purchase/quickbuy", post(quickbuy_handler))
         .nest_service("/static", ServeDir::new("static"))
+        .layer(TraceLayer::new_for_http())
         .layer(
             ServiceBuilder::new()
                 // this middleware goes above `TimeoutLayer` because it will receive
