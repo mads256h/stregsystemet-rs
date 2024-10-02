@@ -5,6 +5,7 @@ mod responses;
 
 use std::{error::Error, time::Duration};
 
+use askama_axum::Template;
 use axum::{
     debug_handler,
     error_handling::HandleErrorLayer,
@@ -56,9 +57,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 fn app(pool: PgPool) -> Router {
     let router = Router::new()
+        .route("/", get(index_handler))
         .route("/api/products/active", get(get_active_products))
         .route("/api/purchase/quickbuy", post(quickbuy_handler))
-        .nest_service("/", ServeDir::new("static"))
+        .nest_service("/static", ServeDir::new("static"))
         .layer(
             ServiceBuilder::new()
                 // this middleware goes above `TimeoutLayer` because it will receive
@@ -119,4 +121,13 @@ async fn quickbuy_handler(
     }
     .await
     .into()
+}
+
+#[derive(Template)]
+#[template(path = "index.html")]
+struct IndexTemplate {}
+
+#[debug_handler]
+async fn index_handler() -> IndexTemplate {
+    IndexTemplate {}
 }

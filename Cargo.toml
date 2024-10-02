@@ -11,6 +11,8 @@ chrono = { version = "0.4", features = ["serde"] }
 axum = { version = "0.7", features = ["macros", "multipart"] }
 tokio = { version = "1.37", features = ["full"] }
 sqlx = { version = "0.8", features = ["postgres", "macros", "migrate", "runtime-tokio", "chrono", "uuid"] }
+askama = { version = "0.12.1", features = ["with-axum"] }
+askama_axum = "0.4.0"
 serde = "1.0"
 serde_json = "1.0"
 serde_with = { version = "3.8", features = ["chrono_0_4"] }
