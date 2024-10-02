@@ -1,6 +1,8 @@
-document.addEventListener("DOMContentLoaded", initializePage)
+document.addEventListener("DOMContentLoaded", initializePage);
 
 async function initializePage() {
+    addQuickBuyHandler();
+
     try {
         const activeProducts = await getActiveProducts();
         populateTable(activeProducts);
@@ -8,6 +10,32 @@ async function initializePage() {
     catch (error) {
         console.error(error.message);
     }
+}
+
+function addQuickBuyHandler() {
+  const quickBuyButton = document.getElementById("quickbuy-submit-button");
+  console.assert(quickBuyButton);
+
+  quickBuyButton.addEventListener("click", performQuickBuy);
+}
+
+async function performQuickBuy() {
+  const quickBuyInput = document.getElementById("quickbuy-field");
+  console.assert(quickBuyInput);
+
+
+  const url = "/api/purchase/quickbuy";
+  const response = await fetch(url, 
+    {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ quickbuy: quickBuyInput.value })
+    });
+
+  console.log(await response.text());
 }
 
 async function getActiveProducts() {
@@ -19,7 +47,7 @@ async function getActiveProducts() {
 
     const json = await response.json();
     console.log(json);
-    return json.products;
+    return json.content.products;
 }
 
 function populateTable(products) {
