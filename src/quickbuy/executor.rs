@@ -1,6 +1,7 @@
 use serde::Serialize;
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
+use sqlx::PgExecutor;
 use sqlx::{PgPool, Postgres, Transaction};
 use thiserror::Error;
 use tracing::trace;
@@ -20,7 +21,7 @@ pub async fn execute_multi_buy_query(
 ) -> Result<(), MultiBuyExecutorError> {
     let mut transaction = pool.begin().await?;
 
-    let user_id = get_user_id_by_name(username, &mut transaction)
+    let user_id = get_user_id_by_name(username, &mut *transaction)
         .await?
         .ok_or_else(|| MultiBuyExecutorError::InvalidUsername(username.to_string()))?;
 
@@ -45,10 +46,13 @@ pub async fn execute_multi_buy_query(
     Ok(())
 }
 
-async fn get_user_id_by_name(
+async fn get_user_id_by_name<'a, E>(
     username: &str,
-    transaction: &mut Transaction<'static, Postgres>,
-) -> Result<Option<UserId>, sqlx::Error> {
+    executor: E,
+) -> Result<Option<UserId>, sqlx::Error>
+where
+    E: PgExecutor<'a>,
+{
     sqlx::query_scalar!(
         r#"
         SELECT id as "id: UserId"
@@ -57,8 +61,16 @@ async fn get_user_id_by_name(
         "#,
         username
     )
-    .fetch_optional(&mut **transaction)
+    .fetch_optional(executor)
     .await
+}
+
+pub async fn username_exists(username: &str, pool: &PgPool) -> Result<(), MultiBuyExecutorError> {
+    get_user_id_by_name(username, pool)
+        .await?
+        .ok_or_else(|| MultiBuyExecutorError::InvalidUsername(username.to_string()))?;
+
+    Ok(())
 }
 
 async fn get_user_money_by_id(
