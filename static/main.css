@@ -61,6 +61,7 @@ table {
   margin: 4px;
   padding: 0;
   display: inline-block;
+  vertical-align: top;
 }
 
 tbody>tr>td:last-child {
@@ -79,4 +80,40 @@ tbody>tr>td:last-child {
 
 #product-tables {
   text-align: center;
+}
+
+#news {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+#news>div {
+  display: flex;
+  align-items: center;
+  min-width: 100%;
+  width: fit-content;
+  animation-name: scroll-left;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+#news span {
+  display: flex;
+}
+
+#news span::before {
+  content: "•";
+  align-content: center;
+  margin: 0 1rem;
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(00%);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
 }

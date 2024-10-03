@@ -18,3 +18,10 @@ VALUES
 INSERT INTO deposits(amount, note, user_id)
 VALUES
   (10000, 'test deposit', 1);
+
+INSERT INTO news(id, content, active, deactivate_after_timestamp)
+VALUES
+  (1, 'This is a sample news item', true, NULL),
+  (2, 'Another sample news item', true, NULL),
+  (3, 'Deactivated news', false, NULL),
+  (4, 'Deactivated by timestamp', true, '2024-09-01');

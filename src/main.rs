@@ -17,10 +17,13 @@ use axum::{
 use dotenv::dotenv;
 use dso::{product::ProductId, streg_cents::StregCents};
 
-use protocol::products::active_products_response::{ActiveProduct, ActiveProductsResponse};
 use protocol::{
     buy_request::{BuyError, BuyRequest, BuyResponse},
     products::active_products_response::DatabaseError,
+};
+use protocol::{
+    news::{ActiveNewsError, ActiveNewsResponse},
+    products::active_products_response::{ActiveProduct, ActiveProductsResponse},
 };
 use quickbuy::{
     executor::{execute_multi_buy_query, username_exists},
@@ -67,6 +70,7 @@ fn app(pool: PgPool) -> Router {
         .route("/", get(index_handler))
         .route("/api/products/active", get(get_active_products))
         .route("/api/purchase/quickbuy", post(quickbuy_handler))
+        .route("/api/news/active", get(get_active_news_handler))
         .nest_service("/static", ServeDir::new("static"))
         .layer(TraceLayer::new_for_http())
         .layer(
@@ -108,7 +112,7 @@ async fn get_active_products(
                 id: p.id,
                 name: p.name,
                 price: p.price.to_string(),
-                aliases: p.aliases.map(|a| a.split(" ").map(|a| a.to_string()).collect()).unwrap_or_default(),
+                aliases: p.aliases.map(|a| a.split(' ').map(|a| a.to_string()).collect()).unwrap_or_default(),
             })
             .collect();
 
@@ -135,6 +139,29 @@ async fn quickbuy_handler(
                 Ok(BuyResponse::MultiBuy)
             }
         }
+    }
+    .await
+    .into()
+}
+
+#[debug_handler]
+async fn get_active_news_handler(
+    State(pool): State<PgPool>,
+) -> ResultJson<ActiveNewsResponse, ActiveNewsError> {
+    async {
+        let news = sqlx::query_scalar!(
+            r#"
+            SELECT content
+            FROM news
+            WHERE active=true AND (deactivate_after_timestamp IS NULL OR deactivate_after_timestamp > now())
+            ORDER BY id
+            "#)
+            .fetch_all(&pool)
+            .await?;
+
+        Ok(ActiveNewsResponse {
+            news,
+        })
     }
     .await
     .into()

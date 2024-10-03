@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Stregsystemet</title>
     <link rel="stylesheet" href="/static/main.css" />
+    <script src="/static/base.js" defer></script>
     {% block head %}{% endblock %}
   </head>
   <body>
@@ -21,6 +22,9 @@
       {% block content %}<p>Placeholder content</p>{% endblock %}
     </main>
     <footer>
+      <div id="news">
+        <div id="news-items"></div>
+      </div>
     </footer>
   </body>
 </html>

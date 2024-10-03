@@ -54,3 +54,10 @@ CREATE TABLE deposits (
     FOREIGN KEY(user_id)
       REFERENCES users(id)
 );
+
+CREATE TABLE news (
+  id SERIAL PRIMARY KEY NOT NULL,
+  content VARCHAR NOT NULL,
+  active BOOLEAN NOT NULL,
+  deactivate_after_timestamp TIMESTAMPTZ
+);
