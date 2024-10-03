@@ -1,3 +1,5 @@
+import { getActiveNews } from "./api.js";
+
 "use strict";
 
 document.addEventListener("DOMContentLoaded", initializePage);
@@ -12,23 +14,9 @@ async function initializeNews() {
   const newsItems = document.getElementById("news-items");
   console.assert(newsItems);
 
-  const news = await getNews();
-  window.news = news;
-}
-
-async function getNews() {
-  // TODO: Error handling pls :)
-  const url = "/api/news/active";
-  const response = await fetch(url,
-    {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-      },
-    });
-
-  const json = await response.json();
-  return json.content.news;
+  const news = await getActiveNews();
+  // TODO: Error handling
+  window.news = news.content.news;
 }
 
 function calculateTickerSpeed() {

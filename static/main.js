@@ -1,3 +1,5 @@
+import {getActiveProducts, postQuickBuy} from "./api.js";
+
 "use strict";
 
 document.addEventListener("DOMContentLoaded", initializePage);
@@ -7,7 +9,9 @@ async function initializePage() {
 
   try {
     const activeProducts = await getActiveProducts();
-    populateTable(activeProducts);
+    // TODO: Error handling
+    const products = activeProducts.content.products;
+    populateTable(products);
   }
   catch (error) {
     console.error(error.message);
@@ -28,31 +32,8 @@ async function performQuickBuy(e) {
   const quickBuyInput = document.getElementById("quickbuy-field");
   console.assert(quickBuyInput);
 
-
-  const url = "/api/purchase/quickbuy";
-  const response = await fetch(url,
-    {
-      method: "POST",
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ quickbuy: quickBuyInput.value })
-    });
-
-  console.log(await response.text());
-}
-
-async function getActiveProducts() {
-  const url = "/api/products/active";
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Response status: ${response.status}`);
-  }
-
-  const json = await response.json();
-  console.log(json);
-  return json.content.products;
+  const response = await postQuickBuy(quickBuyInput.value);
+  console.log(response);
 }
 
 function populateTable(products) {
