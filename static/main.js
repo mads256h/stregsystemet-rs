@@ -74,7 +74,7 @@ function createRow(product) {
   const id = createTableCell(product.id);
   const name = createTableCell(product.name);
   name.title = getProductTooltip(product);
-  const price = createTableCell(product.price);
+  const price = createTableCell(`${product.price} kr`);
   row.appendChild(id);
   row.appendChild(name);
   row.appendChild(price);

@@ -1,7 +1,3 @@
-.quickbuy-container {
-  margin: auto;
-}
-
 body {
   margin: 0
 }
@@ -64,6 +60,10 @@ table {
   margin: 4px;
   padding: 0;
   display: inline-block;
+}
+
+tbody>tr>td:last-child {
+  text-align: right;
 }
 
 .centered {
