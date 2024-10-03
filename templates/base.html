@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="da">
   <head>
-    <meta charset="UTF-8"> 
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Stregsystemet</title>
     <link rel="stylesheet" href="/static/main.css" />
     {% block head %}{% endblock %}
@@ -11,8 +12,9 @@
       <div><input type="button" value="Genstart" onclick="location.href='/'"></div>
       <div><h1>TREOENs STREGSYSTEM</h1></div>
       <div>
-          <input type="button" value="Menu">
-          <input type="button" value="Tilmeld">
+          <!-- Why do we have both Genstart and Menu buttons that does the same exact thing? -->
+          <input type="button" value="Menu" onclick="location.href='/'">
+          <input type="button" value="Tilmeld" onclick="location.href='/signup/'">
       </div>
     </header>
     <main>
