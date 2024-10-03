@@ -83,7 +83,8 @@ function createRow(product) {
 
 function createTableCell(text) {
   const cell = document.createElement("td")
-  cell.innerText = text;
+  // This HTML injection is intentional
+  cell.innerHTML = text;
   return cell;
 }
 

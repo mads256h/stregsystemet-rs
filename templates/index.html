@@ -1,44 +1,45 @@
 {% extends "base.html" %}
 
 {% block head %}
-  <script src="/static/main.js" defer></script>
+<script src="/static/main.js" defer></script>
 {% endblock %}
 
 {% block content %}
-  <div id="instructions">
-    <span>Du kan "sætte streger" på to forskellige måder:</span>
-    <ol>
-      <li>Indtast dit brugernavn nedenfor. Du vil så blive præsenteret for en interaktiv menu.</li>
-      <li>Indtast dit brugernavn og et eller flere produkt ID (adskilt med "space"). Købet vil blive direkte registreret uden yderligere input. Under feltet vil der vises en bekræftelse af købet.</li>
-    </ol>
+<div id="instructions">
+  <span>Du kan "sætte streger" på to forskellige måder:</span>
+  <ol>
+    <li>Indtast dit brugernavn nedenfor. Du vil så blive præsenteret for en interaktiv menu.</li>
+    <li>Indtast dit brugernavn og et eller flere produkt ID (adskilt med "space"). Købet vil blive direkte registreret
+      uden yderligere input. Under feltet vil der vises en bekræftelse af købet.</li>
+  </ol>
+</div>
+<div class="centered">
+  <form id="quickbuy">
+    <label for="quickbuy-field">Quickbuy</label>
+    <input type="text" id="quickbuy-field" required autofocus>
+    <input type="submit" value="Køb">
+  </form>
+  <div id="product-tables">
+    <table id="products1">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Produkt</th>
+          <th>Pris</th>
+        </tr>
+      </thead>
+      <tbody><!-- Gets populated by javascript --></tbody>
+    </table>
+    <table id="products2">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Produkt</th>
+          <th>Pris</th>
+        </tr>
+      </thead>
+      <tbody><!-- Gets populated by javascript --></tbody>
+    </table>
   </div>
-  <div class="centered">
-    <form id="quickbuy">
-        <label for="quickbuy-field">Quickbuy</label>
-        <input type="text" id="quickbuy-field" required autofocus>
-        <input type="submit" value="Køb">
-    </form>
-    <div id="product-tables">
-        <table id="products1">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Produkt</th>
-                    <th>Pris</th>
-                </tr>
-            </thead>
-            <tbody><!-- Gets populated by javascript --></tbody>
-        </table>
-        <table id="products2">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Produkt</th>
-                    <th>Pris</th>
-                </tr>
-            </thead>
-            <tbody><!-- Gets populated by javascript --></tbody>
-        </table>
-    </div>
-  </div>
+</div>
 {% endblock %}
