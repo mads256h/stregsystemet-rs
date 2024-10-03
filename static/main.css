@@ -1,5 +1,5 @@
 body {
-  margin: 0
+  margin: 0;
 }
 
 header {
@@ -7,25 +7,25 @@ header {
   border-bottom: 1px solid;
 
   display: grid;
+  grid-template-columns: 1fr auto 1fr;
 }
 
 header>div {
-  grid-column-start: 1;
-  grid-row-start: 1;
-  justify-self: center;
   align-content: center;
+  text-align: center;
 }
 
 header>div:first-child {
-  justify-self: left;
+  text-align: left;
 }
 
 header>div:last-child {
-  justify-self: right;
+  text-align: right;
 }
 
 header h1 {
   margin: 0;
+  word-break: break-word;
 }
 
 h1 {
@@ -48,12 +48,13 @@ footer {
 table,
 th,
 td {
-  border: 1px solid rgb(0, 0, 0);
+  border: 1px solid;
 }
 
 th,
 td {
   padding: 4px;
+  text-align: left;
 }
 
 table {
@@ -73,5 +74,9 @@ tbody>tr>td:last-child {
 }
 
 .text-centered {
+  text-align: center;
+}
+
+#product-tables {
   text-align: center;
 }
