@@ -97,6 +97,7 @@ async fn get_active_products(
             ON products.id=product_aliases.product_id
             WHERE products.active=true AND (products.deactivate_after_timestamp IS NULL OR products.deactivate_after_timestamp > now())
             GROUP BY products.id, products.name, products.price
+            ORDER BY products.id
             "#)
             .fetch_all(&pool)
             .await?;
