@@ -5,12 +5,13 @@ mod responses;
 
 use std::{error::Error, time::Duration};
 
-use askama_axum::Template;
+use askama_axum::{Response, Template};
 use axum::{
     debug_handler,
     error_handling::HandleErrorLayer,
-    extract::State,
-    http::StatusCode,
+    extract::{Request, State},
+    http::{header, HeaderValue, StatusCode},
+    middleware::{self, Next},
     routing::{get, post},
     BoxError, Json, Router,
 };
@@ -22,7 +23,7 @@ use protocol::{
     products::active_products_response::DatabaseError,
 };
 use protocol::{
-    news::{ActiveNewsError, ActiveNewsResponse},
+    news::ActiveNewsResponse,
     products::active_products_response::{ActiveProduct, ActiveProductsResponse},
 };
 use quickbuy::{
@@ -71,7 +72,12 @@ fn app(pool: PgPool) -> Router {
         .route("/api/products/active", get(get_active_products))
         .route("/api/purchase/quickbuy", post(quickbuy_handler))
         .route("/api/news/active", get(get_active_news_handler))
-        .nest_service("/static", ServeDir::new("static"))
+        .nest_service(
+            "/static",
+            ServiceBuilder::new()
+                .layer(middleware::from_fn(guess_mime_type_from_extension))
+                .service(ServeDir::new("static")),
+        )
         .layer(TraceLayer::new_for_http())
         .layer(
             ServiceBuilder::new()
@@ -85,6 +91,22 @@ fn app(pool: PgPool) -> Router {
         .fallback(not_found_handler);
 
     router.with_state(pool)
+}
+
+async fn guess_mime_type_from_extension(request: Request, next: Next) -> Response {
+    let uri = request.uri().path();
+    let guess = mime_guess::from_path(uri);
+
+    let mut response = next.run(request).await;
+
+    if let Some(mime) = guess.first() {
+        response.headers_mut().insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_str(mime.essence_str()).expect("invalid header value"),
+        );
+    };
+
+    response
 }
 
 #[debug_handler]
@@ -147,7 +169,7 @@ async fn quickbuy_handler(
 #[debug_handler]
 async fn get_active_news_handler(
     State(pool): State<PgPool>,
-) -> ResultJson<ActiveNewsResponse, ActiveNewsError> {
+) -> ResultJson<ActiveNewsResponse, DatabaseError> {
     async {
         let news = sqlx::query_scalar!(
             r#"
