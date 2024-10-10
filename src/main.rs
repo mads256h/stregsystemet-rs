@@ -3,14 +3,15 @@ mod protocol;
 mod quickbuy;
 mod responses;
 
-use std::{error::Error, time::Duration};
+use std::{error::Error, num::NonZeroUsize, sync::Arc, time::Duration};
 
 use askama_axum::{Response, Template};
 use axum::{
+    body::{Body, Bytes},
     debug_handler,
     error_handling::HandleErrorLayer,
     extract::{Request, State},
-    http::{header, HeaderValue, StatusCode},
+    http::{header, response::Parts, HeaderName, HeaderValue, Method, StatusCode, Uri},
     middleware::{self, Next},
     routing::{get, post},
     BoxError, Json, Router,
@@ -18,6 +19,8 @@ use axum::{
 use dotenv::dotenv;
 use dso::{product::ProductId, streg_cents::StregCents};
 
+use http_body_util::BodyExt;
+use lru::LruCache;
 use protocol::{
     buy_request::{BuyError, BuyRequest, BuyResponse},
     products::active_products_response::DatabaseError,
@@ -32,7 +35,7 @@ use quickbuy::{
 };
 use responses::result_json::ResultJson;
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::Mutex};
 use tower::{timeout::TimeoutLayer, ServiceBuilder};
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -66,7 +69,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+type IdempotencyCache = Arc<Mutex<LruCache<(Method, Uri, String), (Parts, Bytes)>>>;
+#[derive(Clone)]
+struct MyState {
+    pool: PgPool,
+    idempotency_cache: IdempotencyCache,
+}
+
 fn app(pool: PgPool) -> Router {
+    let state = MyState {
+        pool,
+        idempotency_cache: Arc::new(Mutex::new(LruCache::new(NonZeroUsize::new(256).unwrap()))),
+    };
+
     let router = Router::new()
         .route("/", get(index_handler))
         .route("/api/products/active", get(get_active_products))
@@ -78,6 +93,10 @@ fn app(pool: PgPool) -> Router {
                 .layer(middleware::from_fn(guess_mime_type_from_extension))
                 .service(ServeDir::new("static")),
         )
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            idempotency_key_handller,
+        ))
         .layer(TraceLayer::new_for_http())
         .layer(
             ServiceBuilder::new()
@@ -90,7 +109,62 @@ fn app(pool: PgPool) -> Router {
         )
         .fallback(not_found_handler);
 
-    router.with_state(pool)
+    router.with_state(state)
+}
+
+// TODO: Clean this shitshow of a function up
+// There is unwrap and clone everywhere
+// We can't remove everything but god damn.
+// TODO: Should we use the request body as a cache key as well?
+async fn idempotency_key_handller(
+    State(state): State<MyState>,
+    request: Request,
+    next: Next,
+) -> Response {
+    static IDEMPOTENCY_HEADER_KEY: HeaderName = HeaderName::from_static("x-idempotency-key");
+
+    let idempotency_key = request.headers().get(&IDEMPOTENCY_HEADER_KEY);
+
+    if request.method() != Method::POST && request.method() != Method::PATCH
+        || idempotency_key.is_none()
+    {
+        // Already an idempotent method or no idempotency key provided: Not handling
+        let response = next.run(request).await;
+        return response;
+    }
+
+    let idempotency_key = idempotency_key.unwrap().to_str().unwrap().to_owned();
+    let cache_key = (
+        request.method().clone(),
+        request.uri().clone(),
+        idempotency_key,
+    );
+    let cached_response = {
+        let mut idempotency_cache = state.idempotency_cache.lock().await;
+        idempotency_cache.get(&cache_key).cloned()
+    };
+
+    match cached_response {
+        Some(cached_response) => {
+            let (parts, bytes) = cached_response;
+            let body: Body = bytes.clone().into();
+
+            Response::from_parts(parts.clone(), body)
+        }
+        None => {
+            let response = next.run(request).await;
+            let (parts, body) = response.into_parts();
+            let bytes = body.collect().await.unwrap().to_bytes();
+
+            let return_body: Body = bytes.clone().into();
+            {
+                let mut idempotency_cache = state.idempotency_cache.lock().await;
+                idempotency_cache.put(cache_key, (parts.clone(), bytes));
+            }
+
+            Response::from_parts(parts, return_body)
+        }
+    }
 }
 
 async fn guess_mime_type_from_extension(request: Request, next: Next) -> Response {
@@ -111,7 +185,7 @@ async fn guess_mime_type_from_extension(request: Request, next: Next) -> Respons
 
 #[debug_handler]
 async fn get_active_products(
-    State(pool): State<PgPool>,
+    State(state): State<MyState>,
 ) -> ResultJson<ActiveProductsResponse, DatabaseError> {
     async {
         let products = sqlx::query!(
@@ -125,7 +199,7 @@ async fn get_active_products(
             GROUP BY products.id, products.name, products.price
             ORDER BY products.id
             "#)
-            .fetch_all(&pool)
+            .fetch_all(&state.pool)
             .await?;
 
         let active_products = products
@@ -146,18 +220,18 @@ async fn get_active_products(
 
 #[debug_handler]
 async fn quickbuy_handler(
-    State(pool): State<PgPool>,
+    State(state): State<MyState>,
     Json(buy_request): Json<BuyRequest>,
 ) -> ResultJson<BuyResponse, BuyError> {
     async {
         let quickbuy_type = parse_quickbuy_query(&buy_request.quickbuy)?;
         match quickbuy_type {
             QuickBuyType::Username { username } => {
-                username_exists(&username, &pool).await?;
+                username_exists(&username, &state.pool).await?;
                 Ok(BuyResponse::Username { username })
             }
             QuickBuyType::MultiBuy { username, products } => {
-                execute_multi_buy_query(&username, &products, &pool).await?;
+                execute_multi_buy_query(&username, &products, &state.pool).await?;
                 Ok(BuyResponse::MultiBuy)
             }
         }
@@ -168,7 +242,7 @@ async fn quickbuy_handler(
 
 #[debug_handler]
 async fn get_active_news_handler(
-    State(pool): State<PgPool>,
+    State(state): State<MyState>,
 ) -> ResultJson<ActiveNewsResponse, DatabaseError> {
     async {
         let news = sqlx::query_scalar!(
@@ -178,7 +252,7 @@ async fn get_active_news_handler(
             WHERE active=true AND (deactivate_after_timestamp IS NULL OR deactivate_after_timestamp > now())
             ORDER BY id
             "#)
-            .fetch_all(&pool)
+            .fetch_all(&state.pool)
             .await?;
 
         Ok(ActiveNewsResponse {
