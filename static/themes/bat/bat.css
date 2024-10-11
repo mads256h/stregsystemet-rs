@@ -1,0 +1,16 @@
+#bat-container {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.bat {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transition-property: left, top;
+  transition-timing-function: linear;
+}

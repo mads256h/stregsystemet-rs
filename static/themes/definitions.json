@@ -1,0 +1,24 @@
+[
+  {
+    "name": "fireworks",
+    "startDateInclusive": {
+      "month": 12,
+      "day": 25
+    },
+    "endDateInclusive": {
+      "month": 1,
+      "day": 31
+    }
+  },
+  {
+    "name": "bat",
+    "startDateInclusive": {
+      "month": 10,
+      "day": 1
+    },
+    "endDateInclusive": {
+      "month": 10,
+      "day": 31
+    }
+  }
+]
