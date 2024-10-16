@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::Serialize;
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
@@ -11,6 +13,7 @@ use crate::dso::{
     streg_cents::{stregcents_sum, StregCents},
     user::UserId,
 };
+use crate::protocol::buy_request::BoughtProduct;
 
 use super::parser::MultiBuyProduct;
 
@@ -18,14 +21,14 @@ pub async fn execute_multi_buy_query(
     username: &str,
     multi_buy_products: &[MultiBuyProduct],
     pool: &PgPool,
-) -> Result<(), MultiBuyExecutorError> {
+) -> Result<(Vec<BoughtProduct>, StregCents, StregCents), MultiBuyExecutorError> {
     let mut transaction = pool.begin().await?;
 
     let user_id = get_user_id_by_name(username, &mut *transaction)
         .await?
         .ok_or_else(|| MultiBuyExecutorError::InvalidUsername(username.to_string()))?;
 
-    let user_money = get_user_money_by_id(user_id, &mut transaction).await?;
+    let user_balance = get_user_balance_by_id(user_id, &mut transaction).await?;
 
     let multi_buy_products_with_ids =
         get_multi_buy_products_with_ids(multi_buy_products, &mut transaction).await?;
@@ -33,17 +36,24 @@ pub async fn execute_multi_buy_query(
     let product_price_sum =
         get_product_price_sum(&multi_buy_products_with_ids, &mut transaction).await?;
 
-    if user_money < product_price_sum {
+    if user_balance < product_price_sum {
         return Err(MultiBuyExecutorError::InsufficientFunds(product_price_sum));
     }
 
-    purchase_products(user_id, &multi_buy_products_with_ids, &mut transaction).await?;
+    let new_user_balance =
+        (user_balance - product_price_sum).ok_or(MultiBuyExecutorError::StregCentsOverflow)?;
+    let bought_products =
+        purchase_products(user_id, &multi_buy_products_with_ids, &mut transaction).await?;
 
     transaction.commit().await?;
 
     trace!(target: "stregsystemet", "user {} just bought products totalling {} kr", username, product_price_sum);
 
-    Ok(())
+    let bought_products = bought_products
+        .into_iter()
+        .map(|(product_id, amount)| BoughtProduct { product_id, amount })
+        .collect();
+    Ok((bought_products, product_price_sum, new_user_balance))
 }
 
 async fn get_user_id_by_name<'a, E>(
@@ -73,7 +83,7 @@ pub async fn username_exists(username: &str, pool: &PgPool) -> Result<(), MultiB
     Ok(())
 }
 
-async fn get_user_money_by_id(
+async fn get_user_balance_by_id(
     user_id: UserId,
     transaction: &mut Transaction<'static, Postgres>,
 ) -> Result<StregCents, sqlx::Error> {
@@ -189,14 +199,18 @@ async fn purchase_products(
     user_id: UserId,
     multi_buy_products_with_ids: &[MultiBuyProductProductIdPair<'_>],
     transaction: &mut Transaction<'static, Postgres>,
-) -> Result<(), sqlx::Error> {
+) -> Result<HashMap<ProductId, i32>, sqlx::Error> {
+    let mut product_bought = HashMap::new();
     for multi_buy_product_with_id in multi_buy_products_with_ids {
         for _ in 0..(multi_buy_product_with_id.multi_buy_product.amount.into()) {
             purchase_product(user_id, multi_buy_product_with_id.product_id, transaction).await?;
+            *product_bought
+                .entry(multi_buy_product_with_id.product_id)
+                .or_insert(0) += 1;
         }
     }
 
-    Ok(())
+    Ok(product_bought)
 }
 
 async fn purchase_product(
