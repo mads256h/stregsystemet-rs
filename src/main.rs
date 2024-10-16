@@ -231,8 +231,13 @@ async fn quickbuy_handler(
                 Ok(BuyResponse::Username { username })
             }
             QuickBuyType::MultiBuy { username, products } => {
-                execute_multi_buy_query(&username, &products, &state.pool).await?;
-                Ok(BuyResponse::MultiBuy)
+                let (bought_products, product_price_sum, new_user_balance) =
+                    execute_multi_buy_query(&username, &products, &state.pool).await?;
+                Ok(BuyResponse::MultiBuy {
+                    bought_products,
+                    product_price_sum,
+                    new_user_balance,
+                })
             }
         }
     }

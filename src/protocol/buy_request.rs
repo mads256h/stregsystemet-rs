@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
+    dso::{product::ProductId, streg_cents::StregCents},
     quickbuy::{executor::MultiBuyExecutorError, parser::QuickBuyParseError},
     responses::result_json::HttpStatusCode,
 };
@@ -15,8 +16,20 @@ pub struct BuyRequest {
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum BuyResponse {
-    Username { username: String },
-    MultiBuy,
+    Username {
+        username: String,
+    },
+    MultiBuy {
+        bought_products: Vec<BoughtProduct>,
+        product_price_sum: StregCents,
+        new_user_balance: StregCents,
+    },
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct BoughtProduct {
+    pub product_id: ProductId,
+    pub amount: i32,
 }
 
 #[derive(Error, Debug, Serialize)]
