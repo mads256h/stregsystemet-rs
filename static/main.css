@@ -78,8 +78,21 @@ tbody>tr>td:last-child {
   text-align: center;
 }
 
+.disabled {
+  pointer-events: none;
+  opacity: 0.4;
+}
+
 #product-tables {
   text-align: center;
+}
+
+.product-menu thead>tr>th:first-child {
+  display: none;
+}
+
+.product-menu tbody>tr>td:first-child {
+  display: none;
 }
 
 #news {

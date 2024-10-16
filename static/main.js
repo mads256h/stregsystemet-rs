@@ -1,4 +1,5 @@
-import {getActiveProducts, postQuickBuy} from "./api.js";
+import { getActiveProducts, postQuickBuy, isResponseOk } from "./api.js";
+import { populateTable } from "./product-table.js";
 
 "use strict";
 
@@ -11,7 +12,7 @@ async function initializePage() {
     const activeProducts = await getActiveProducts();
     // TODO: Error handling
     const products = activeProducts.content.products;
-    populateTable(products);
+    populateTable(products, populateProductNameCell);
   }
   catch (error) {
     console.error(error.message);
@@ -34,39 +35,20 @@ async function performQuickBuy(e) {
 
   const response = await postQuickBuy(quickBuyInput.value);
   console.log(response);
-}
 
-function populateTable(products) {
-  const table1 = document.getElementById("products1").getElementsByTagName("tbody")[0];
-  const table2 = document.getElementById("products2").getElementsByTagName("tbody")[0];
-  for (const i in products) {
-    const row = createRow(products[i]);
-    if (i % 2 === 0) {
-      table1.appendChild(row);
-    } else {
-      table2.appendChild(row);
+  if (isResponseOk(response)) {
+    // Redirect to menu page if user only typed in username
+    if (response.content.type === "Username") {
+      const username = response.content.username;
+      window.location.href = `/menu/#username=${encodeURIComponent(username)}`;
     }
-
   }
 }
 
-function createRow(product) {
-  const row = document.createElement("tr")
-  const id = createTableCell(product.id);
-  const name = createTableCell(product.name);
-  name.title = getProductTooltip(product);
-  const price = createTableCell(`${product.price} kr`);
-  row.appendChild(id);
-  row.appendChild(name);
-  row.appendChild(price);
-  return row;
-}
-
-function createTableCell(text) {
-  const cell = document.createElement("td")
+function populateProductNameCell(cell, product) {
   // This HTML injection is intentional
-  cell.innerHTML = text;
-  return cell;
+  cell.innerHTML = product.name;
+  cell.title = getProductTooltip(product);
 }
 
 function getProductTooltip(product) {
