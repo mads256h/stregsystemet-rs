@@ -55,7 +55,7 @@ function getUsernameFromUrl(url) {
     return null;
   }
 
-  // A little fragile
+  // Special characters are not a problem as they are URL encoded
   const usernameFragment = split[1];
   const usernameFragmentSplit = usernameFragment.split("=");
   if (split.length !== 2 || usernameFragmentSplit[0] !== "username") {
