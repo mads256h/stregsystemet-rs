@@ -1,7 +1,7 @@
 use std::{
     fmt::Display,
     num::NonZeroU32,
-    ops::{Add, Mul},
+    ops::{Add, Mul, Sub},
 };
 
 use serde::{Deserialize, Serialize};
@@ -26,6 +26,14 @@ impl Add for StregCents {
 
     fn add(self, rhs: Self) -> Self::Output {
         i64::checked_add(self.0, rhs.0).map(StregCents)
+    }
+}
+
+impl Sub for StregCents {
+    type Output = Option<Self>;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        i64::checked_sub(self.0, rhs.0).map(StregCents)
     }
 }
 
