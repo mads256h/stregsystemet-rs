@@ -20,6 +20,7 @@ pub enum BuyResponse {
         username: String,
     },
     MultiBuy {
+        username: String,
         bought_products: Vec<BoughtProduct>,
         product_price_sum: StregCents,
         new_user_balance: StregCents,
