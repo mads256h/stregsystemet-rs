@@ -15,6 +15,14 @@ export async function postQuickBuy(quickbuyQuery) {
   return await postRequest(url, { quickbuy: quickbuyQuery });
 }
 
+export function isResponseOk(response) {
+  return response.status === "Ok";
+}
+
+export function isResponseError(response) {
+  return !isResponseOk(response);
+}
+
 
 async function getRequest(url) {
   // TODO: Introduce timeout, retry, and exponential backoff.
@@ -33,7 +41,7 @@ async function getRequest(url) {
   if (isJson) {
     return await response.json();
   }
-  
+
   const text = await response.text();
   return { status: "Error", content: { "InternalServerError": { "text": text } } };
 }
@@ -57,7 +65,7 @@ async function postRequest(url, body) {
   if (isJson) {
     return await response.json();
   }
-  
+
   const text = await response.text();
   return { status: "Error", content: { "InternalServerError": { "text": text } } };
 }

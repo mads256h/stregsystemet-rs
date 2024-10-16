@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block head %}
+<script src="/static/menu.js" type="module" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="centered">
+  <div id="product-tables" class="product-menu">
+    <table id="products1">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Produkt</th>
+          <th>Pris</th>
+        </tr>
+      </thead>
+      <tbody><!-- Gets populated by javascript --></tbody>
+    </table>
+    <table id="products2">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Produkt</th>
+          <th>Pris</th>
+        </tr>
+      </thead>
+      <tbody><!-- Gets populated by javascript --></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

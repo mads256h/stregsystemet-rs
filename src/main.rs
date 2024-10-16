@@ -84,6 +84,7 @@ fn app(pool: PgPool) -> Router {
 
     let router = Router::new()
         .route("/", get(index_handler))
+        .route("/menu/", get(menu_handler))
         .route("/api/products/active", get(get_active_products))
         .route("/api/purchase/quickbuy", post(quickbuy_handler))
         .route("/api/news/active", get(get_active_news_handler))
@@ -276,6 +277,15 @@ struct IndexTemplate {}
 #[debug_handler]
 async fn index_handler() -> IndexTemplate {
     IndexTemplate {}
+}
+
+#[derive(Template)]
+#[template(path = "menu.html")]
+struct MenuTemplate {}
+
+#[debug_handler]
+async fn menu_handler() -> MenuTemplate {
+    MenuTemplate {}
 }
 
 #[derive(Template)]
