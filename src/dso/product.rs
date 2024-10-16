@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::streg_cents::StregCents;
 
-#[derive(Deserialize, Serialize, Debug, sqlx::Type, PartialEq, Eq, Clone, Copy)]
+#[derive(Deserialize, Serialize, Debug, sqlx::Type, PartialEq, Eq, Clone, Copy, Hash)]
 #[sqlx(transparent)]
 pub struct ProductId(i32);
 
