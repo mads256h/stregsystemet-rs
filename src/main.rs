@@ -5,6 +5,8 @@ mod responses;
 
 use std::{error::Error, num::NonZeroUsize, sync::Arc, time::Duration};
 
+use lazy_static::lazy_static;
+
 use askama_axum::{Response, Template};
 use axum::{
     body::{Body, Bytes},
@@ -16,10 +18,12 @@ use axum::{
     routing::{get, post},
     BoxError, Json, Router,
 };
+
 use dotenv::dotenv;
 use dso::{product::ProductId, streg_cents::StregCents};
 
 use http_body_util::BodyExt;
+use httpdate::HttpDate;
 use lru::LruCache;
 use protocol::{
     buy_request::{BuyError, BuyRequest, BuyResponse},
@@ -39,6 +43,10 @@ use tokio::{net::TcpListener, sync::Mutex};
 use tower::{timeout::TimeoutLayer, ServiceBuilder};
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+lazy_static! {
+    static ref START_TIME: String = HttpDate::from(std::time::SystemTime::now()).to_string();
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -94,6 +102,8 @@ fn app(pool: PgPool) -> Router {
                 .layer(middleware::from_fn(guess_mime_type_from_extension))
                 .service(ServeDir::new("static")),
         )
+        .layer(middleware::from_fn(set_browser_cache))
+        .layer(middleware::from_fn(set_last_modified_to_start_time))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             idempotency_key_handller,
@@ -181,6 +191,46 @@ async fn guess_mime_type_from_extension(request: Request, next: Next) -> Respons
         );
     };
 
+    response
+}
+
+async fn set_last_modified_to_start_time(request: Request, next: Next) -> Response {
+    let is_api_call = request.uri().path().starts_with("/api");
+    let mut response = next.run(request).await;
+
+    // Don't set last modified on api calls
+    if !is_api_call {
+        response
+            .headers_mut()
+            .insert(header::LAST_MODIFIED, HeaderValue::from_static(&START_TIME));
+    }
+
+    response
+}
+
+async fn set_browser_cache(request: Request, next: Next) -> Response {
+    // Never cache api calls
+    if request.uri().path().starts_with("/api") {
+        disable_browser_cache(request, next).await
+    } else {
+        enable_browser_cache(request, next).await
+    }
+}
+
+async fn enable_browser_cache(request: Request, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    response.headers_mut().insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=3600"),
+    );
+    response
+}
+
+async fn disable_browser_cache(request: Request, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
     response
 }
 
