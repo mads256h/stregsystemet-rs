@@ -15,6 +15,29 @@ export async function postQuickBuy(quickbuyQuery) {
   return await postRequest(url, { quickbuy: quickbuyQuery });
 }
 
+export async function getThemeDefinitions() {
+  const url = "/static/themes/definitions.json";
+
+  // TODO: Introduce timeout, retry, and exponential backoff.
+  const response = await fetch(
+    url,
+    {
+      method: "GET",
+      headers: {
+        "Accept": "application/json"
+      }
+    });
+
+  const isJson = response.headers.get("Content-Type") === "application/json";
+
+  if (isJson) {
+    return await response.json();
+  }
+
+  const text = await response.text();
+  return { status: "Error", content: { "InternalServerError": { "text": text } } };
+}
+
 export function isResponseOk(response) {
   return response.status === "Ok";
 }
