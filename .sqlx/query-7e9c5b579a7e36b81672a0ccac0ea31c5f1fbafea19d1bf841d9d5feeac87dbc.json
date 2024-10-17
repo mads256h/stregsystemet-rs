@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT price as \"price: StregCents\"\n        FROM products\n        WHERE id = $1 AND active=true AND (deactivate_after_timestamp IS NULL OR deactivate_after_timestamp > now())\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "price: StregCents",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7e9c5b579a7e36b81672a0ccac0ea31c5f1fbafea19d1bf841d9d5feeac87dbc"
+}

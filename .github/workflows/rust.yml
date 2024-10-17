@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:13
+        image: postgres:17
         env:
           POSTGRES_USER: stregsystemet
           POSTGRES_PASSWORD: password
@@ -43,6 +43,7 @@ jobs:
           sudo apt-get install libpq-dev -y
           cargo install sqlx-cli --features postgres
           SKIP_DOCKER=true ./scripts/init_db.sh
+          cargo sqlx prepare --check
 
       - uses: actions-rs/cargo@v1
         with:
