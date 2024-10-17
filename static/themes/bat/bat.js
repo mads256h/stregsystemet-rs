@@ -12,20 +12,28 @@ batContainerElement.id = "bat-container";
 document.body.appendChild(batContainerElement);
 
 function createBat() {
-  const batElement = document.createElement("img");
+  const batElement = document.createElement("div");
   batElement.className = "bat";
-  batElement.src = "/static/themes/bat/bat.gif";
+
+  const imageElement = document.createElement("div");
+  imageElement.className = "img";
+  imageElement.style.animationDelay = `${-Math.random()}s`;
+  batElement.appendChild(imageElement);
+
   batContainerElement.appendChild(batElement);
 
-  const width = batElement.clientWidth;
-  const height = batElement.clientHeight;
+  const width = 48;
+  const height = 48;
 
   let x = Math.random() * (window.innerWidth - width);
   let y = Math.random() * (window.innerHeight - height);
 
+  batElement.style.left = x + "px";
+  batElement.style.top = y + "px";
+
   function updateBat() {
-    const width = batElement.clientWidth;
-    const height = batElement.clientHeight;
+    const width = imageElement.clientWidth;
+    const height = imageElement.clientHeight;
 
     let newX = Math.random() * (window.innerWidth - width);
     let newY = Math.random() * (window.innerHeight - height);

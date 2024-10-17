@@ -14,3 +14,20 @@
   transition-property: left, top;
   transition-timing-function: linear;
 }
+
+.bat>.img {
+  width: 48px;
+  height: 48px;
+  background: url("/static/themes/bat/bat-sprite-sheet.png");
+  animation: sprite 0.5s steps(6) infinite;
+}
+
+@keyframes sprite {
+  from {
+    background-position: 0px;
+  }
+
+  to {
+    background-position: -288px;
+  }
+}
