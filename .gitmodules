@@ -1,0 +1,3 @@
+[submodule "static/logo"]
+	path = static/logo
+	url = https://github.com/f-klubben/logo.git
