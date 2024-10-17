@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO sales(price, product_id, user_id)\n        VALUES ((SELECT price FROM products WHERE id = $1), $1, $2)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "839b5cdaeb8a32887b6b7d225c7c336808bbf26d726915a135a180d19c889a94"
+}

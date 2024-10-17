@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT ((SELECT COALESCE(SUM(amount), 0) FROM deposits WHERE user_id = $1) - (SELECT COALESCE(SUM(price), 0) FROM sales WHERE user_id = $1))::bigint as \"money!: StregCents\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "money!: StregCents",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "d32c5bda7ab57dc56c838a3853fa7622e7e468a2e9f73babd7029f37ad615ca8"
+}

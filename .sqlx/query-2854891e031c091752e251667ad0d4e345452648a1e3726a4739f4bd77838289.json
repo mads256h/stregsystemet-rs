@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT products.id as \"id: ProductId\", products.name, products.price as \"price: StregCents\", STRING_AGG(product_aliases.alias_name, ' ') as aliases\n            -- ' ' is an illegal character in aliases so it can be used as a separator\n            FROM products\n            LEFT JOIN product_aliases\n            ON products.id=product_aliases.product_id\n            WHERE products.active=true AND (products.deactivate_after_timestamp IS NULL OR products.deactivate_after_timestamp > now())\n            GROUP BY products.id, products.name, products.price\n            ORDER BY products.id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: ProductId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "price: StregCents",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "aliases",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "2854891e031c091752e251667ad0d4e345452648a1e3726a4739f4bd77838289"
+}

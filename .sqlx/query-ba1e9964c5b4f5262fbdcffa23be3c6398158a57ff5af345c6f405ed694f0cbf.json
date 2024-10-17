@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT product_id as \"id: ProductId\"\n        FROM product_aliases\n        WHERE alias_name = LOWER($1) -- alias_name is always lower due to constraint\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: ProductId",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ba1e9964c5b4f5262fbdcffa23be3c6398158a57ff5af345c6f405ed694f0cbf"
+}
