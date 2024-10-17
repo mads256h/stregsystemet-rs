@@ -11,4 +11,4 @@ docker run                         \
   -e POSTGRES_PASSWORD='password'  \
   -e POSTGRES_DB='stregsystemet'   \
   -p 5432:5432                     \
-  docker.io/postgres:16
+  docker.io/postgres:17
