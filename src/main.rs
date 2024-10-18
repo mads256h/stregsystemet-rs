@@ -70,7 +70,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
-    let listener = TcpListener::bind("127.0.0.1:8080").await?;
+    let listener = TcpListener::bind("0.0.0.0:8080").await?;
 
     axum::serve(listener, app(pool))
         .with_graceful_shutdown(shutdown_signal())
