@@ -1,6 +1,7 @@
 FROM rust:alpine AS build
 WORKDIR /build
 COPY . .
+ENV SQLX_OFFLINE=true
 RUN apk add libc-dev
 RUN cargo build --release
 RUN mkdir -p /opt/stregsystemet/
