@@ -39,7 +39,7 @@ use quickbuy::{
 };
 use responses::result_json::ResultJson;
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use tokio::{net::TcpListener, sync::Mutex};
+use tokio::{net::TcpListener, signal, sync::Mutex};
 use tower::{timeout::TimeoutLayer, ServiceBuilder};
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -70,9 +70,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
-    let listener = TcpListener::bind("127.0.0.1:8080").await?;
+    let listener = TcpListener::bind("0.0.0.0:8080").await?;
 
-    axum::serve(listener, app(pool)).await?;
+    axum::serve(listener, app(pool))
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     Ok(())
 }
@@ -345,4 +347,28 @@ struct NotFoundTemplate {}
 #[debug_handler]
 async fn not_found_handler() -> (StatusCode, NotFoundTemplate) {
     (StatusCode::NOT_FOUND, NotFoundTemplate {})
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
 }
