@@ -19,6 +19,8 @@
             name = "stregsystemet-rs";
             cargoSha256 = "sha256-VY0UXted3xbpoHTscFZ1gc/n8xHPU4JYjJeDpzUkC+4=";
             src = ./.;
+            SQLX_OFFLINE="true";
+            doCheck=false;
         };
     };
 }
