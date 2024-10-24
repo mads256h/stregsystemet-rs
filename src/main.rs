@@ -12,7 +12,7 @@ use axum::{
     body::{Body, Bytes},
     debug_handler,
     error_handling::HandleErrorLayer,
-    extract::{Query, Request, State},
+    extract::{Path, Query, Request, State},
     http::{header, response::Parts, HeaderName, HeaderValue, Method, StatusCode, Uri},
     middleware::{self, Next},
     routing::{get, post},
@@ -28,6 +28,7 @@ use lru::LruCache;
 use protocol::{
     buy_request::{BuyError, BuyRequest, BuyResponse},
     products::active_products_response::DatabaseError,
+    rooms::{RoomIdRequest, RoomInfoError, RoomInfoResponse},
     users::{UserInfoError, UserInfoResponse, UsernameRequest},
 };
 use protocol::{
@@ -95,12 +96,13 @@ fn app(pool: PgPool) -> Router {
     };
 
     let router = Router::new()
-        .route("/", get(index_handler))
-        .route("/menu/", get(menu_handler))
+        .route("/:room_id/", get(index_handler))
+        .route("/:room_id/menu/", get(menu_handler))
         .route("/api/products/active", get(get_active_products))
         .route("/api/purchase/quickbuy", post(quickbuy_handler))
         .route("/api/news/active", get(get_active_news_handler))
         .route("/api/users/info", get(get_users_info_handler))
+        .route("/api/rooms/info", get(get_rooms_info_handler))
         .nest_service(
             "/static",
             ServiceBuilder::new()
@@ -266,6 +268,7 @@ async fn disable_browser_cache(request: Request, next: Next) -> Response {
 #[debug_handler]
 async fn get_active_products(
     State(state): State<MyState>,
+    Query(room_id_request): Query<RoomIdRequest>,
 ) -> ResultJson<ActiveProductsResponse, DatabaseError> {
     async {
         let products = sqlx::query!(
@@ -274,11 +277,20 @@ async fn get_active_products(
             -- ' ' is an illegal character in aliases so it can be used as a separator
             FROM products
             LEFT JOIN product_aliases
-            ON products.id=product_aliases.product_id
-            WHERE products.active=true AND (products.deactivate_after_timestamp IS NULL OR products.deactivate_after_timestamp > now())
+                ON products.id = product_aliases.product_id
+            JOIN room_products
+                ON products.id = room_products.product_id
+            JOIN rooms
+                ON rooms.id = room_products.room_id
+            WHERE products.active = true
+            AND (products.deactivate_after_timestamp IS NULL OR products.deactivate_after_timestamp > NOW())
+            AND rooms.id = $1  -- Replace <ROOM_ID> with the actual room ID
+            AND rooms.active = true
+            AND (rooms.deactivate_after_timestamp IS NULL OR rooms.deactivate_after_timestamp > NOW())
             GROUP BY products.id, products.name, products.price
-            ORDER BY products.id
-            "#)
+            ORDER BY products.id;
+            "#,
+            room_id_request.room_id)
             .fetch_all(&state.pool)
             .await?;
 
@@ -312,7 +324,8 @@ async fn quickbuy_handler(
             }
             QuickBuyType::MultiBuy { username, products } => {
                 let (bought_products, product_price_sum, new_user_balance) =
-                    execute_multi_buy_query(&username, &products, &state.pool).await?;
+                    execute_multi_buy_query(&username, &products, buy_request.room_id, &state.pool)
+                        .await?;
                 Ok(BuyResponse::MultiBuy {
                     username,
                     bought_products,
@@ -371,22 +384,48 @@ async fn get_users_info_handler(
     }.await.into()
 }
 
+#[debug_handler]
+async fn get_rooms_info_handler(
+    State(state): State<MyState>,
+    Query(room_request): Query<RoomIdRequest>,
+) -> ResultJson<RoomInfoResponse, RoomInfoError> {
+    async {
+        let room = sqlx::query!(
+            r#"
+            SELECT id, name
+            FROM rooms
+            WHERE id = $1 AND active=true AND (deactivate_after_timestamp IS NULL OR deactivate_after_timestamp > now())
+            "#,
+            room_request.room_id)
+            .fetch_optional(&state.pool)
+            .await?;
+
+        let room = room.ok_or(RoomInfoError::InvalidRoom(room_request.room_id))?;
+        let room_info_response = RoomInfoResponse { room_id: room.id, name: room.name };
+        Ok(room_info_response)
+    }.await.into()
+}
+
 #[derive(Template)]
 #[template(path = "index.html")]
-struct IndexTemplate {}
+struct IndexTemplate {
+    pub room_id: i64,
+}
 
 #[debug_handler]
-async fn index_handler() -> IndexTemplate {
-    IndexTemplate {}
+async fn index_handler(Path(room_id): Path<i64>) -> IndexTemplate {
+    IndexTemplate { room_id }
 }
 
 #[derive(Template)]
 #[template(path = "menu.html")]
-struct MenuTemplate {}
+struct MenuTemplate {
+    pub room_id: i64,
+}
 
 #[debug_handler]
-async fn menu_handler() -> MenuTemplate {
-    MenuTemplate {}
+async fn menu_handler(Path(room_id): Path<i64>) -> MenuTemplate {
+    MenuTemplate { room_id }
 }
 
 #[derive(Template)]

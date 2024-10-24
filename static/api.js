@@ -8,8 +8,13 @@ const statusCodes = {
   "internalServerError": 500
 }
 
-export async function getActiveProducts() {
-  const url = "/api/products/active";
+export async function getRoomInfo(roomId) {
+  const url = `/api/rooms/info?room_id=${encodeURIComponent(roomId)}`;
+  return await getRequest(url);
+}
+
+export async function getActiveProducts(roomId) {
+  const url = `/api/products/active?room_id=${encodeURIComponent(roomId)}`;
   return await getRequest(url);
 }
 
@@ -23,9 +28,9 @@ export async function getActiveNews() {
   return await getRequest(url);
 }
 
-export async function postQuickBuy(quickbuyQuery) {
+export async function postQuickBuy(quickbuyQuery, roomId) {
   const url = "/api/purchase/quickbuy";
-  return await postRequest(url, { quickbuy: quickbuyQuery });
+  return await postRequest(url, { quickbuy: quickbuyQuery, room_id: roomId });
 }
 
 export async function getThemeDefinitions() {

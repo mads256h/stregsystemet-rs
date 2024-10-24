@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT products.price as \"price: StregCents\"\n        FROM products\n        JOIN room_products\n            ON products.id = room_products.product_id\n        JOIN rooms\n            ON rooms.id = room_products.room_id\n        WHERE products.id = $1 AND products.active=true AND (products.deactivate_after_timestamp IS NULL OR products.deactivate_after_timestamp > now())\n            AND rooms.id = $2 AND rooms.active=true AND (rooms.deactivate_after_timestamp IS NULL OR rooms.deactivate_after_timestamp > now())\n        GROUP BY products.id, products.price\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "price: StregCents",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "983fec92aeeb98ce95846a18b7aeb7a5cff2603513dcbef777d3c84637e4e4e9"
+}
