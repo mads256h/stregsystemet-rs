@@ -17,7 +17,7 @@ cargo build
 Make sure that rust is installed on your system.
 You will need to install `sqlx-cli`.
 ```bash
-cargo install sqlx
+cargo install sqlx-cli
 ```
 
 After this step create a file in the root of the project named `.env`.
