@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT id, username, email, ((SELECT COALESCE(SUM(amount), 0) FROM deposits WHERE user_id = users.id) - (SELECT COALESCE(SUM(price), 0) FROM sales WHERE user_id = users.id))::bigint as \"balance!: StregCents\"\n            FROM users\n            WHERE LOWER(username) = LOWER($1)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "username",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "email",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "balance!: StregCents",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "fb202359031b163116490103f37688c6f492c0badf291932c37c0ac16e6d5e55"
+}
