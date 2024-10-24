@@ -12,7 +12,7 @@ use axum::{
     body::{Body, Bytes},
     debug_handler,
     error_handling::HandleErrorLayer,
-    extract::{Request, State},
+    extract::{Query, Request, State},
     http::{header, response::Parts, HeaderName, HeaderValue, Method, StatusCode, Uri},
     middleware::{self, Next},
     routing::{get, post},
@@ -28,6 +28,7 @@ use lru::LruCache;
 use protocol::{
     buy_request::{BuyError, BuyRequest, BuyResponse},
     products::active_products_response::DatabaseError,
+    users::{UserInfoError, UserInfoResponse, UsernameRequest},
 };
 use protocol::{
     news::ActiveNewsResponse,
@@ -99,6 +100,7 @@ fn app(pool: PgPool) -> Router {
         .route("/api/products/active", get(get_active_products))
         .route("/api/purchase/quickbuy", post(quickbuy_handler))
         .route("/api/news/active", get(get_active_news_handler))
+        .route("/api/users/info", get(get_users_info_handler))
         .nest_service(
             "/static",
             ServiceBuilder::new()
@@ -345,6 +347,28 @@ async fn get_active_news_handler(
     }
     .await
     .into()
+}
+
+#[debug_handler]
+async fn get_users_info_handler(
+    State(state): State<MyState>,
+    Query(username_request): Query<UsernameRequest>,
+) -> ResultJson<UserInfoResponse, UserInfoError> {
+    async {
+        let user_info = sqlx::query!(
+            r#"
+            SELECT id, username, email, ((SELECT COALESCE(SUM(amount), 0) FROM deposits WHERE user_id = users.id) - (SELECT COALESCE(SUM(price), 0) FROM sales WHERE user_id = users.id))::bigint as "balance!: StregCents"
+            FROM users
+            WHERE LOWER(username) = LOWER($1)
+            "#,
+            username_request.username)
+            .fetch_optional(&state.pool)
+            .await?;
+
+        let user_info = user_info.ok_or(UserInfoError::InvalidUsername(username_request.username))?;
+        let user_info = UserInfoResponse { username: user_info.username, first_name: "SAVE FIRST NAME".to_string(), last_name: "SAVE LAST NAME".to_string(), email: user_info.email, balance: user_info.balance.to_string() };
+        Ok(user_info)
+    }.await.into()
 }
 
 #[derive(Template)]

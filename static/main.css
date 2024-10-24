@@ -102,6 +102,11 @@ tbody>tr>td:last-child {
   margin: 1rem 0;
 }
 
+#user-info {
+  font-weight: bold;
+  margin: 1rem 0;
+}
+
 #product-tables {
   text-align: center;
 }

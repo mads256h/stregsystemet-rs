@@ -1,5 +1,5 @@
-import { getActiveProducts, postQuickBuy } from "./api.js";
-import { populateTable } from "./product-table.js";
+import { getActiveProducts, getUserInfo, postQuickBuy, isResponseOk, isResponseError } from "./api.js";
+import { populateTable, handleQuickBuyError } from "./product-table.js";
 
 "use strict";
 
@@ -14,9 +14,23 @@ async function initializePage() {
   }
 
   try {
+    const userInfo = await getUserInfo(username);
+
+    if (isResponseError(userInfo)) {
+      // User does not exist go back to menu
+      window.location.href = "/";
+      return;
+    }
+
+    const userInfoElement = document.getElementById("user-info");
+    userInfoElement.innerText = `${userInfo.content.first_name} ${userInfo.content.last_name} (${userInfo.content.email})`;
+
+    setUserBalance(userInfo.content.balance);
+
     const activeProducts = await getActiveProducts();
     // TODO: Error handling
     const products = activeProducts.content.products;
+    window.products = products;
     populateTable(products, (cell, product) => populateProductNameCell(cell, product, username));
   }
   catch (error) {
@@ -42,6 +56,20 @@ async function buyProduct(productId, username) {
   try {
     const response = await postQuickBuy(`${username} ${productId}`);
     console.log(response);
+
+    if (isResponseOk(response)) {
+      // Redirect to menu page if user only typed in username
+      if (response.content.type === "MultiBuy") {
+        const quickBuyErrorElement = document.getElementById("quickbuy-error");
+        console.assert(quickBuyErrorElement);
+        quickBuyErrorElement.innerText = "";
+
+        outputMultiBuyPurchase(response.content);
+      }
+    }
+    else {
+      handleQuickBuyError(response.content);
+    }
   }
   finally {
     productsTableElement.classList.remove("disabled");
@@ -69,4 +97,28 @@ function getUsernameFromUrl(url) {
   }
 
   return username;
+}
+
+function setUserBalance(balance) {
+  const userBalanceElement = document.getElementById("user-balance");
+  console.assert(userBalanceElement);
+
+  userBalanceElement.innerText = `Du har ${balance} kr til gode`;
+}
+
+function outputMultiBuyPurchase(responseContent) {
+  const username = responseContent.username;
+  const boughtProducts = responseContent.bought_products;
+  const productPriceSum = responseContent.product_price_sum;
+  const newUserBalance = responseContent.new_user_balance;
+
+  setUserBalance(newUserBalance);
+
+  const quickBuyOutputElement = document.getElementById("quickbuy-output");
+  console.assert(quickBuyOutputElement);
+
+  // TODO: Output "og" between the last elements
+  const productsText = boughtProducts.map(p => `${p.amount} stk ${window.products.find(f => f.id == p.product_id).name}`).join(", ");
+
+  quickBuyOutputElement.innerText += `${username} har lige købt ${productsText} for tilsammen ${productPriceSum} kr\n`;
 }

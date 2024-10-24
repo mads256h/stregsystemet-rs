@@ -13,6 +13,11 @@ export async function getActiveProducts() {
   return await getRequest(url);
 }
 
+export async function getUserInfo(username) {
+  const url = `/api/users/info?username=${encodeURIComponent(username)}`;
+  return await getRequest(url);
+}
+
 export async function getActiveNews() {
   const url = "/api/news/active";
   return await getRequest(url);
