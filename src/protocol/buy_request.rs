@@ -11,6 +11,7 @@ use crate::{
 #[derive(Deserialize, Serialize)]
 pub struct BuyRequest {
     pub quickbuy: String,
+    pub room_id: i32,
 }
 
 #[derive(Deserialize, Serialize)]

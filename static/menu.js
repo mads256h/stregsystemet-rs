@@ -27,7 +27,7 @@ async function initializePage() {
 
     setUserBalance(userInfo.content.balance);
 
-    const activeProducts = await getActiveProducts();
+    const activeProducts = await getActiveProducts(window.roomId);
     // TODO: Error handling
     const products = activeProducts.content.products;
     window.products = products;
