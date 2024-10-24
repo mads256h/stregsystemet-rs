@@ -37,7 +37,10 @@ pub async fn execute_multi_buy_query(
         get_product_price_sum(&multi_buy_products_with_ids, &mut transaction).await?;
 
     if user_balance < product_price_sum {
-        return Err(MultiBuyExecutorError::InsufficientFunds(product_price_sum));
+        return Err(MultiBuyExecutorError::InsufficientFunds {
+            username: username.to_string(),
+            product_price_sum,
+        });
     }
 
     let new_user_balance =
@@ -237,6 +240,7 @@ async fn purchase_product(
 
 #[serde_as]
 #[derive(Error, Debug, Serialize)]
+#[serde(tag = "type", content = "context")]
 pub enum MultiBuyExecutorError {
     #[error("database error: {0}")]
     DbError(
@@ -251,8 +255,11 @@ pub enum MultiBuyExecutorError {
     #[error("invalid product: {0}")]
     InvalidProduct(String),
 
-    #[error("insufficient funds: {0}")]
-    InsufficientFunds(StregCents),
+    #[error("user {username} has insufficient funds to pay for: {product_price_sum}")]
+    InsufficientFunds {
+        username: String,
+        product_price_sum: StregCents,
+    },
 
     #[error("stregcents overflow / underflow")]
     StregCentsOverflow,
@@ -406,7 +413,7 @@ mod tests {
 
         assert!(matches!(
             result,
-            Err(MultiBuyExecutorError::InsufficientFunds(_))
+            Err(MultiBuyExecutorError::InsufficientFunds { .. })
         ));
     }
 
@@ -425,7 +432,7 @@ mod tests {
 
         assert!(matches!(
             result,
-            Err(MultiBuyExecutorError::InsufficientFunds(_))
+            Err(MultiBuyExecutorError::InsufficientFunds { .. })
         ));
     }
 

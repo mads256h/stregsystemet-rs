@@ -97,7 +97,7 @@ async function retryRequestLoop(url, method, body) {
 
   // We never got a response or every response is an internal server error
   if (response == null) {
-    return { status: "Error", content: "NoConnection" };
+    return { status: "Error", content: { "NoConnection": {} } };
   }
 
   const text = await response.text();

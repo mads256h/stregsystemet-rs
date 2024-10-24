@@ -20,14 +20,14 @@ pub fn parse_quickbuy_query(quickbuy_query: &str) -> Result<QuickBuyType, QuickB
     }
 }
 
-fn parse_multi_buy_expression(split: &[&str]) -> Result<QuickBuyType, MultiBuyParseError> {
+fn parse_multi_buy_expression(split: &[&str]) -> Result<QuickBuyType, QuickBuyParseError> {
     let username = split[0];
     let rest = &split[1..];
 
     let products = rest
         .iter()
         .map(|product| parse_multi_buy_product(product))
-        .collect::<Result<Vec<MultiBuyProduct>, MultiBuyParseError>>()?;
+        .collect::<Result<Vec<MultiBuyProduct>, QuickBuyParseError>>()?;
 
     Ok(QuickBuyType::MultiBuy {
         username: username.into(),
@@ -35,7 +35,7 @@ fn parse_multi_buy_expression(split: &[&str]) -> Result<QuickBuyType, MultiBuyPa
     })
 }
 
-fn parse_multi_buy_product(product_query: &str) -> Result<MultiBuyProduct, MultiBuyParseError> {
+fn parse_multi_buy_product(product_query: &str) -> Result<MultiBuyProduct, QuickBuyParseError> {
     let split = product_query.split(':').collect::<Vec<&str>>();
 
     match split.len() {
@@ -47,13 +47,13 @@ fn parse_multi_buy_product(product_query: &str) -> Result<MultiBuyProduct, Multi
             product_name: parse_product_name(split[0])?.into(),
             amount: split[1].parse::<NonZeroU32>()?,
         }),
-        _ => Err(MultiBuyParseError::Syntax),
+        _ => Err(QuickBuyParseError::Syntax),
     }
 }
 
-fn parse_product_name(product_name: &str) -> Result<&str, MultiBuyParseError> {
+fn parse_product_name(product_name: &str) -> Result<&str, QuickBuyParseError> {
     match product_name.len() {
-        0 => Err(MultiBuyParseError::EmptyProduct),
+        0 => Err(QuickBuyParseError::EmptyProduct),
         _ => Ok(product_name),
     }
 }
@@ -75,18 +75,13 @@ pub struct MultiBuyProduct {
     pub amount: NonZeroU32,
 }
 
+#[serde_as]
 #[derive(Error, Debug, Serialize)]
+#[serde(tag = "type", content = "context")]
 pub enum QuickBuyParseError {
     #[error("query is empty")]
     EmptyQuery,
 
-    #[error(transparent)]
-    MultiBuy(#[from] MultiBuyParseError),
-}
-
-#[serde_as]
-#[derive(Error, Debug, Serialize)]
-pub enum MultiBuyParseError {
     #[error("syntax error")]
     Syntax,
 
@@ -154,10 +149,7 @@ mod tests {
     fn empty_product_multibuy_query() {
         let error = parse_quickbuy_query("test_user :2").unwrap_err();
 
-        assert!(matches!(
-            error,
-            QuickBuyParseError::MultiBuy(MultiBuyParseError::EmptyProduct)
-        ))
+        assert!(matches!(error, QuickBuyParseError::EmptyProduct))
     }
 
     #[test]
@@ -191,9 +183,6 @@ mod tests {
     fn parse_and_expect_invalid_amount_multibuy_query(query: &str) {
         let error = parse_quickbuy_query(query).unwrap_err();
 
-        assert!(matches!(
-            error,
-            QuickBuyParseError::MultiBuy(MultiBuyParseError::InvalidAmount(_))
-        ))
+        assert!(matches!(error, QuickBuyParseError::InvalidAmount(_)))
     }
 }

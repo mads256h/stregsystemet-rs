@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    dso::{product::ProductId, streg_cents::StregCents},
+    dso::product::ProductId,
     quickbuy::{executor::MultiBuyExecutorError, parser::QuickBuyParseError},
     responses::result_json::HttpStatusCode,
 };
@@ -22,8 +22,8 @@ pub enum BuyResponse {
     MultiBuy {
         username: String,
         bought_products: Vec<BoughtProduct>,
-        product_price_sum: StregCents,
-        new_user_balance: StregCents,
+        product_price_sum: String,
+        new_user_balance: String,
     },
 }
 
@@ -34,6 +34,7 @@ pub struct BoughtProduct {
 }
 
 #[derive(Error, Debug, Serialize)]
+#[serde(tag = "type", content = "context")]
 pub enum BuyError {
     #[error("parser error {0}")]
     Parser(#[from] QuickBuyParseError),
