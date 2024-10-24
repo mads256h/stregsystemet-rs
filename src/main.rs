@@ -7,7 +7,7 @@ use std::{error::Error, num::NonZeroUsize, sync::Arc, time::Duration};
 
 use lazy_static::lazy_static;
 
-use askama_axum::{Response, Template};
+use askama_axum::{IntoResponse, Response, Template};
 use axum::{
     body::{Body, Bytes},
     debug_handler,
@@ -37,6 +37,7 @@ use quickbuy::{
     executor::{execute_multi_buy_query, username_exists},
     parser::{parse_quickbuy_query, QuickBuyType},
 };
+use rand::Rng;
 use responses::result_json::ResultJson;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::{net::TcpListener, signal, sync::Mutex};
@@ -104,6 +105,7 @@ fn app(pool: PgPool) -> Router {
                 .layer(middleware::from_fn(guess_mime_type_from_extension))
                 .service(ServeDir::new("static")),
         )
+        //.layer(middleware::from_fn(_inject_random_faults))
         .layer(middleware::from_fn(set_browser_cache))
         .layer(middleware::from_fn(set_last_modified_to_start_time))
         .layer(middleware::from_fn_with_state(
@@ -177,6 +179,29 @@ async fn idempotency_key_handller(
 
             Response::from_parts(parts, return_body)
         }
+    }
+}
+
+async fn _inject_random_faults(request: Request, next: Next) -> Response {
+    // If we don't put this in a function it wont compile :)
+    fn get_random() -> bool {
+        let mut rng = rand::thread_rng();
+        rng.gen_ratio(1, 2)
+    }
+
+    let is_api_call = request.uri().path().starts_with("/api");
+
+    let rng = get_random();
+    let should_return_error = is_api_call && rng;
+
+    if should_return_error {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Artificial Injected Error",
+        )
+            .into_response()
+    } else {
+        next.run(request).await
     }
 }
 

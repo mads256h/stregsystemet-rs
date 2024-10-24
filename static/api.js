@@ -1,5 +1,13 @@
 "use strict";
 
+const numRetries = 3;
+const timeoutMs = 5000;
+const retryAfter = 1000;
+
+const statusCodes = {
+  "internalServerError": 500
+}
+
 export async function getActiveProducts() {
   const url = "/api/products/active";
   return await getRequest(url);
@@ -48,47 +56,92 @@ export function isResponseError(response) {
 
 
 async function getRequest(url) {
-  // TODO: Introduce timeout, retry, and exponential backoff.
-  const response = await fetch(
-    url,
-    {
-      method: "GET",
-      headers: {
-        "Accept": "application/json"
-      },
-      cache: "no-store"
-    });
+  return await retryRequestLoop(url, "GET", null);
+}
 
-  const isJson = response.headers.get("Content-Type") === "application/json";
+async function postRequest(url, body) {
+  const stringBody = JSON.stringify(body);
 
-  if (isJson) {
-    return await response.json();
+  return await retryRequestLoop(url, "POST", stringBody);
+}
+
+async function retryRequestLoop(url, method, body) {
+  // TODO: Idempotency key is not used for get requests but keep it for now.
+  const idempotencyKey = generateUuid();
+  let response;
+  for (let attempt = 0; attempt < numRetries; attempt++) {
+    const next_request_time = Date.now() + retryAfter * 4 ** attempt;
+    try {
+      response = await performRequest(url, method, idempotencyKey, body, timeoutMs * 3 ** attempt);
+
+      const isJson = response.headers.get("Content-Type") === "application/json";
+      if (!isJson || response.status === statusCodes.internalServerError) {
+        // Retry
+        if (attempt !== numRetries - 1) {
+          await sleep_until(next_request_time);
+        }
+        continue;
+      }
+      if (isJson) {
+        return await response.json();
+      }
+    }
+    catch (e) {
+      console.warn(e);
+
+      // Retry
+      await sleep_until(next_request_time);
+      continue;
+    }
+  }
+
+  // We never got a response or every response is an internal server error
+  if (response == null) {
+    return { status: "Error", content: "NoConnection" };
   }
 
   const text = await response.text();
   return { status: "Error", content: { "InternalServerError": { "text": text } } };
 }
 
-async function postRequest(url, body) {
-  // TODO: Introduce timeout, retry, and exponential backoff.
+async function performRequest(url, method, idempotencyKey, body, timeout) {
+  const noBodyHeaders = {
+    "Accept": "application/json",
+    "X-Idempotency-Key": idempotencyKey
+  };
+
+  const bodyHeaders = {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "X-Idempotency-Key": idempotencyKey
+  }
+
+  const headers = body == null ? noBodyHeaders : bodyHeaders;
+
   const response = await fetch(
     url,
     {
-      method: "POST",
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-      },
+      method: method,
+      headers: headers,
       cache: "no-store",
-      body: JSON.stringify(body)
+      body: body,
+      signal: AbortSignal.timeout(timeout)
     });
 
-  const isJson = response.headers.get("Content-Type") === "application/json";
+  return response;
+}
 
-  if (isJson) {
-    return await response.json();
+function generateUuid() {
+  return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
+    (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+  );
+}
+
+function sleep_until(time) {
+  const diff = time - Date.now();
+  if (diff <= 0) {
+    return new Promise(r => r());
   }
 
-  const text = await response.text();
-  return { status: "Error", content: { "InternalServerError": { "text": text } } };
+  return new Promise(resolve => setTimeout(resolve, diff));
 }
