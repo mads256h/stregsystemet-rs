@@ -314,8 +314,8 @@ async fn quickbuy_handler(
                 Ok(BuyResponse::MultiBuy {
                     username,
                     bought_products,
-                    product_price_sum,
-                    new_user_balance,
+                    product_price_sum: product_price_sum.to_string(),
+                    new_user_balance: new_user_balance.to_string(),
                 })
             }
         }

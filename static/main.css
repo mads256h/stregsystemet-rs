@@ -28,7 +28,8 @@ header h1 {
   word-break: break-word;
 }
 
-h1 {
+h1,
+h2 {
   color: red;
 }
 
@@ -81,6 +82,24 @@ tbody>tr>td:last-child {
 .disabled {
   pointer-events: none;
   opacity: 0.4;
+}
+
+#quickbuy-error::before {
+  content: "Fejl: ";
+}
+
+#quickbuy-error:empty::before {
+  content: none;
+}
+
+#quickbuy-error:empty {
+  display: none;
+}
+
+#quickbuy-output {
+  display: block;
+  font-weight: bold;
+  margin: 1rem 0;
 }
 
 #product-tables {

@@ -14,10 +14,16 @@
   </ol>
 </div>
 <div class="centered">
-  <form id="quickbuy">
-    <label for="quickbuy-field">Quickbuy</label>
-    <input type="text" id="quickbuy-field" required autofocus>
-    <input type="submit" value="Køb">
+  <h2 id="quickbuy-error"></h2>
+  <form id="quickbuy" class="centered">
+    <div>
+      <label for="quickbuy-field">Quickbuy</label>
+      <input type="text" id="quickbuy-field" required autofocus>
+      <input type="submit" id="quickbuy-button" value="Køb">
+    </div>
+    <div>
+      <output id="quickbuy-output"></output>
+    </div>
   </form>
   <div id="product-tables">
     <table id="products1">
