@@ -1,4 +1,5 @@
 pub mod buy_request;
 pub mod news;
 pub mod products;
+pub mod rooms;
 pub mod users;
