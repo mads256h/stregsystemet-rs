@@ -8,7 +8,7 @@ license = "GPL-3.0"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
-axum = { version = "0.7", features = ["macros", "multipart"] }
+axum = { version = "0.8", features = ["macros", "multipart"] }
 tokio = { version = "1.44", features = ["full"] }
 sqlx = { version = "0.8", features = ["postgres", "macros", "migrate", "runtime-tokio", "chrono", "uuid"] }
 askama = { version = "0.12.1", features = ["with-axum"] }
