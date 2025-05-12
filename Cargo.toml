@@ -21,7 +21,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 derive_more = { version = "2.0", features = ["full"] }
 tower = { version = "0.5", features = ["util", "timeout"] }
-tower-http = { version = "0.6.2", features = ["fs", "trace"] }
+tower-http = { version = "0.6.4", features = ["fs", "trace"] }
 thiserror = "2.0.12"
 bytes = "1.10"
 mime = "0.3.16"
