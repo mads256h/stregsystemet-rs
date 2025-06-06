@@ -1,9 +1,22 @@
+INSERT INTO rooms(id, name, active, deactivate_after_timestamp)
+VALUES
+  (1, 'Alrum', true, NULL),
+  (2, 'Ølrum', true, NULL),
+  (3, 'Deactivated', false, NULL),
+  (4, 'Expired', true, '2024-09-01');
+
 INSERT INTO products(id, name, price, active, deactivate_after_timestamp)
 VALUES 
   (1, 'Øl',               700 ,  true,  NULL),
   (2, 'Sodavand',         1200,  true,  NULL),
   (3, 'Søm',              200,   false, NULL),
   (4, 'Fytteturs Billet', 30000, true,  '2024-09-01');
+
+INSERT INTO room_products(room_id, product_id)
+VALUES
+  (1, 1),
+  (1, 2),
+  (2, 1);
 
 INSERT INTO product_aliases(alias_name, product_id)
 VALUES
@@ -24,4 +37,4 @@ VALUES
   (1, 'This is a sample news item', true, NULL),
   (2, 'Another sample news item', true, NULL),
   (3, 'Deactivated news', false, NULL),
-  (4, 'Deactivated by timestamp', true, '2024-09-01');
+  (4, 'Expired', true, '2024-09-01');
