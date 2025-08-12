@@ -9,7 +9,7 @@ async function initializePage() {
   addQuickBuyHandler();
 
   try {
-    const activeProducts = await getActiveProducts();
+    const activeProducts = await getActiveProducts(window.roomId);
     // TODO: Error handling
     const products = activeProducts.content.products;
     window.products = products;
@@ -36,14 +36,14 @@ async function performQuickBuy(e) {
 
   disableQuickBuy();
 
-  const response = await postQuickBuy(quickBuyInput.value);
+  const response = await postQuickBuy(quickBuyInput.value, window.roomId);
   console.log(response);
 
   if (isResponseOk(response)) {
     // Redirect to menu page if user only typed in username
     if (response.content.type === "Username") {
       const username = response.content.username;
-      window.location.href = `/menu/#username=${encodeURIComponent(username)}`;
+      window.location.href = `/${window.roomId}/menu/#username=${encodeURIComponent(username)}`;
       return;
     }
 
@@ -60,6 +60,21 @@ async function performQuickBuy(e) {
   }
 
   enableQuickBuy();
+}
+
+function outputMultiBuyPurchase(responseContent) {
+  const username = responseContent.username;
+  const boughtProducts = responseContent.bought_products;
+  const productPriceSum = responseContent.product_price_sum;
+  const newUserBalance = responseContent.new_user_balance;
+
+  const quickBuyOutputElement = document.getElementById("quickbuy-output");
+  console.assert(quickBuyOutputElement);
+
+  // TODO: Output "og" between the last elements
+  const productsText = boughtProducts.map(p => `${p.amount} stk ${window.products.find(f => f.id == p.product_id).name}`).join(", ");
+
+  quickBuyOutputElement.innerText = `${username} har lige købt ${productsText} for tilsammen ${productPriceSum} kr\n`;
 }
 
 function disableQuickBuy() {
