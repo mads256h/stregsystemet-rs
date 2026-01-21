@@ -1,4 +1,4 @@
-import { getActiveNews } from "./api.js";
+import { getRoomInfo, getActiveNews, isResponseError } from "./api.js";
 
 "use strict";
 
@@ -6,8 +6,31 @@ document.addEventListener("DOMContentLoaded", initializePage);
 window.addEventListener("resize", calculateTickerSpeed);
 
 async function initializePage() {
+  await initializeRoomTitle();
   await initializeNews();
   calculateTickerSpeed();
+}
+
+async function initializeRoomTitle() {
+  if (window.roomId == null) {
+    // We are not on a page that uses room id.
+    return;
+  }
+  
+
+  const titleElement = document.getElementById("title");
+  console.assert(titleElement);
+
+  const roomInfo = await getRoomInfo(window.roomId);
+
+  if (isResponseError(roomInfo)) {
+    // Just fuck off if we hit an error.
+    location.href = "/";
+    return;
+  }
+
+  // HTML injection on purpose
+  titleElement.innerHTML = `TREOENs STREGSYSTEM : ${roomInfo.content.name}`;
 }
 
 async function initializeNews() {

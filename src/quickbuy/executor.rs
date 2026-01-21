@@ -20,6 +20,7 @@ use super::parser::MultiBuyProduct;
 pub async fn execute_multi_buy_query(
     username: &str,
     multi_buy_products: &[MultiBuyProduct],
+    room_id: i32,
     pool: &PgPool,
 ) -> Result<(Vec<BoughtProduct>, StregCents, StregCents), MultiBuyExecutorError> {
     let mut transaction = pool.begin().await?;
@@ -34,7 +35,7 @@ pub async fn execute_multi_buy_query(
         get_multi_buy_products_with_ids(multi_buy_products, &mut transaction).await?;
 
     let product_price_sum =
-        get_product_price_sum(&multi_buy_products_with_ids, &mut transaction).await?;
+        get_product_price_sum(&multi_buy_products_with_ids, room_id, &mut transaction).await?;
 
     if user_balance < product_price_sum {
         return Err(MultiBuyExecutorError::InsufficientFunds {
@@ -101,6 +102,7 @@ async fn get_user_balance_by_id(
 
 async fn get_product_price_sum(
     mutli_buy_products_with_ids: &[MultiBuyProductProductIdPair<'_>],
+    room_id: i32,
     transaction: &mut Transaction<'static, Postgres>,
 ) -> Result<StregCents, MultiBuyExecutorError> {
     // TODO: How do you do this without having to do a ugly loop?
@@ -109,7 +111,7 @@ async fn get_product_price_sum(
     for multi_buy_product_with_id in mutli_buy_products_with_ids {
         products_with_prices.push((
             multi_buy_product_with_id,
-            get_product_price(multi_buy_product_with_id, transaction).await?,
+            get_product_price(multi_buy_product_with_id, room_id, transaction).await?,
         ))
     }
 
@@ -123,9 +125,10 @@ async fn get_product_price_sum(
 
 async fn get_product_price(
     multi_buy_product_with_id: &MultiBuyProductProductIdPair<'_>,
+    room_id: i32,
     transaction: &mut Transaction<'static, Postgres>,
 ) -> Result<StregCents, MultiBuyExecutorError> {
-    get_product_price_by_id(multi_buy_product_with_id.product_id, transaction)
+    get_product_price_by_id(multi_buy_product_with_id.product_id, room_id, transaction)
         .await?
         .ok_or_else(|| {
             MultiBuyExecutorError::InvalidProduct(
@@ -139,15 +142,23 @@ async fn get_product_price(
 
 async fn get_product_price_by_id(
     product_id: ProductId,
+    room_id: i32,
     transaction: &mut Transaction<'static, Postgres>,
 ) -> Result<Option<StregCents>, sqlx::Error> {
     sqlx::query_scalar!(
         r#"
-        SELECT price as "price: StregCents"
+        SELECT products.price as "price: StregCents"
         FROM products
-        WHERE id = $1 AND active=true AND (deactivate_after_timestamp IS NULL OR deactivate_after_timestamp > now())
+        JOIN room_products
+            ON products.id = room_products.product_id
+        JOIN rooms
+            ON rooms.id = room_products.room_id
+        WHERE products.id = $1 AND products.active=true AND (products.deactivate_after_timestamp IS NULL OR products.deactivate_after_timestamp > now())
+            AND rooms.id = $2 AND rooms.active=true AND (rooms.deactivate_after_timestamp IS NULL OR rooms.deactivate_after_timestamp > now())
+        GROUP BY products.id, products.price
         "#,
-        product_id as ProductId
+        product_id as ProductId,
+        room_id
     )
     .fetch_optional(&mut **transaction)
     .await
@@ -277,6 +288,7 @@ mod tests {
     use super::*;
 
     #[sqlx::test(fixtures(
+        "../../fixtures/rooms.sql",
         "../../fixtures/users.sql",
         "../../fixtures/products.sql",
         "../../fixtures/deposits.sql"
@@ -287,12 +299,13 @@ mod tests {
             amount: NonZeroU32::new(1).unwrap(),
         };
 
-        execute_multi_buy_query("test_user", &[product], &pool)
+        execute_multi_buy_query("test_user", &[product], 1, &pool)
             .await
             .unwrap();
     }
 
     #[sqlx::test(fixtures(
+        "../../fixtures/rooms.sql",
         "../../fixtures/users.sql",
         "../../fixtures/products.sql",
         "../../fixtures/product_aliases.sql",
@@ -304,12 +317,13 @@ mod tests {
             amount: NonZeroU32::new(1).unwrap(),
         };
 
-        execute_multi_buy_query("test_user", &[product], &pool)
+        execute_multi_buy_query("test_user", &[product], 1, &pool)
             .await
             .unwrap();
     }
 
     #[sqlx::test(fixtures(
+        "../../fixtures/rooms.sql",
         "../../fixtures/users.sql",
         "../../fixtures/products.sql",
         "../../fixtures/product_aliases.sql",
@@ -321,12 +335,13 @@ mod tests {
             amount: NonZeroU32::new(1).unwrap(),
         };
 
-        execute_multi_buy_query("test_user", &[product], &pool)
+        execute_multi_buy_query("test_user", &[product], 1, &pool)
             .await
             .unwrap();
     }
 
     #[sqlx::test(fixtures(
+        "../../fixtures/rooms.sql",
         "../../fixtures/users.sql",
         "../../fixtures/products.sql",
         "../../fixtures/product_aliases.sql",
@@ -338,27 +353,27 @@ mod tests {
             amount: NonZeroU32::new(1).unwrap(),
         };
 
-        execute_multi_buy_query("TeSt_UsEr", &[product], &pool)
+        execute_multi_buy_query("TeSt_UsEr", &[product], 1, &pool)
             .await
             .unwrap();
     }
 
     #[sqlx::test]
     async fn multi_buy_invalid_username(pool: PgPool) {
-        let result = execute_multi_buy_query("i_do_not_exist", &[], &pool).await;
+        let result = execute_multi_buy_query("i_do_not_exist", &[], 1, &pool).await;
 
         assert!(
             matches!(result, Err(MultiBuyExecutorError::InvalidUsername(username)) if username == "i_do_not_exist")
         );
     }
 
-    #[sqlx::test(fixtures("../../fixtures/users.sql"))]
+    #[sqlx::test(fixtures("../../fixtures/rooms.sql", "../../fixtures/users.sql"))]
     async fn multi_buy_invalid_product_unknown(pool: PgPool) {
         let product = MultiBuyProduct {
             product_name: "1337".to_string(),
             amount: NonZeroU32::new(1).unwrap(),
         };
-        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
+        let result = execute_multi_buy_query("test_user", &[product], 1, &pool).await;
 
         assert!(
             matches!(result, Err(MultiBuyExecutorError::InvalidProduct(product_name)) if product_name == "1337")
@@ -366,6 +381,7 @@ mod tests {
     }
 
     #[sqlx::test(fixtures(
+        "../../fixtures/rooms.sql",
         "../../fixtures/users.sql",
         "../../fixtures/products.sql",
         "../../fixtures/product_aliases.sql"
@@ -375,7 +391,7 @@ mod tests {
             product_name: "inactive".to_string(),
             amount: NonZeroU32::new(1).unwrap(),
         };
-        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
+        let result = execute_multi_buy_query("test_user", &[product], 1, &pool).await;
 
         assert!(
             matches!(result, Err(MultiBuyExecutorError::InvalidProduct(product_name)) if product_name == "inactive")
@@ -383,6 +399,7 @@ mod tests {
     }
 
     #[sqlx::test(fixtures(
+        "../../fixtures/rooms.sql",
         "../../fixtures/users.sql",
         "../../fixtures/products.sql",
         "../../fixtures/product_aliases.sql"
@@ -392,7 +409,7 @@ mod tests {
             product_name: "inactive_timestamp".to_string(),
             amount: NonZeroU32::new(1).unwrap(),
         };
-        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
+        let result = execute_multi_buy_query("test_user", &[product], 1, &pool).await;
 
         assert!(
             matches!(result, Err(MultiBuyExecutorError::InvalidProduct(product_name)) if product_name == "inactive_timestamp")
@@ -400,6 +417,7 @@ mod tests {
     }
 
     #[sqlx::test(fixtures(
+        "../../fixtures/rooms.sql",
         "../../fixtures/users.sql",
         "../../fixtures/products.sql",
         "../../fixtures/product_aliases.sql"
@@ -409,7 +427,7 @@ mod tests {
             product_name: "enabled".to_string(),
             amount: NonZeroU32::new(1).unwrap(),
         };
-        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
+        let result = execute_multi_buy_query("test_user", &[product], 1, &pool).await;
 
         assert!(matches!(
             result,
@@ -418,6 +436,7 @@ mod tests {
     }
 
     #[sqlx::test(fixtures(
+        "../../fixtures/rooms.sql",
         "../../fixtures/users.sql",
         "../../fixtures/products.sql",
         "../../fixtures/product_aliases.sql",
@@ -428,7 +447,7 @@ mod tests {
             product_name: "expensive".to_string(),
             amount: NonZeroU32::new(1).unwrap(),
         };
-        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
+        let result = execute_multi_buy_query("test_user", &[product], 1, &pool).await;
 
         assert!(matches!(
             result,
@@ -437,6 +456,7 @@ mod tests {
     }
 
     #[sqlx::test(fixtures(
+        "../../fixtures/rooms.sql",
         "../../fixtures/users.sql",
         "../../fixtures/products.sql",
         "../../fixtures/product_aliases.sql"
@@ -446,7 +466,7 @@ mod tests {
             product_name: "overflow".to_string(),
             amount: NonZeroU32::MAX,
         };
-        let result = execute_multi_buy_query("test_user", &[product], &pool).await;
+        let result = execute_multi_buy_query("test_user", &[product], 1, &pool).await;
 
         assert!(matches!(
             result,
